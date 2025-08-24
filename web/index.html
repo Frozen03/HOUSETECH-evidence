@@ -414,6 +414,7 @@ window.addEventListener('load', async ()=>{
   let tries=0; const t=setInterval(()=>{ if(initGoogle()||tries++>40) clearInterval(t); },100);
   if(accessToken && me){
     await loadBootstrapData();
+if (typeof renderProjects === "function") renderProjects();
     // nastavitev vidnosti gumbov po vlogah ob refreshu
     const roles = me?.roles||[];
     const isOwner = roles.includes('Owner');
