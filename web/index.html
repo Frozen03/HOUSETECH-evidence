@@ -659,6 +659,11 @@ function prepareReportFilters(){
   const now=new Date(); const fm=new Date(now.getFullYear(),now.getMonth(),1); const tm=new Date(now.getFullYear(),now.getMonth()+1,0);
   from.value=fm.toISOString().slice(0,10); to.value=tm.toISOString().slice(0,10);
   renderEmployeesFilter(); document.getElementById('repRefresh')?.addEventListener('click',renderReports);
+document.getElementById('repRefresh')?.addEventListener('click', () => {
+  renderReports();
+  if (__drSelectedProject) refreshDiaryDetails();
+});
+
 }
 async function renderReports(){
   const from=new Date(document.getElementById('repFrom').value||'1970-01-01'); from.setHours(0,0,0,0);
@@ -669,6 +674,8 @@ async function renderReports(){
     const qs=new URLSearchParams(); qs.set('from',from.getTime()); qs.set('to',to.getTime());
     if(proj) qs.set('projectId',proj); if(emp) qs.set('email',emp);
     const r=await fetch(API_BASE+'/jobs?'+qs.toString(),{headers:{Authorization:'Bearer '+accessToken}}); return r.ok?await r.json():[];
+renderDiaryProjectsList();
+
   })();
 
   const presence=buildPresenceRows(presenceRaw);
