@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: housetech-ops
+    env: node
+    region: frankfurt
+    plan: starter           # lahko tudi free za test, a brez persistent diska
+    branch: main
+    buildCommand: cd server && npm install
+    startCommand: node server.js
+    autoDeploy: true
+
+    # Environment variables
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PORT
+        value: 8787
+      - key: DATA_DIR
+        value: /data
+      - key: GOOGLE_CLIENT_ID
+        sync: false          # dodal boš ročno v Render UI (skrivnost)
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false          # če ga rabiš na backendu
+      - key: JWT_SECRET
+        generateValue: true  # Render ti generira
+      - key: CORS_ORIGIN
+        value: "*"           # zoži na https://evidenca.housetech.si ko dodaš domene
+
+    # Persistent disk za JSON (materials/users/joblogs…)
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
