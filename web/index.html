@@ -134,53 +134,139 @@
     </div>
   </section>
 
-  <!-- REPORTS -->
-  <section id="tab-reports" class="hidden">
-    <div class="card">
-      <h2 class="text-lg font-semibold mb-3"><i class="fas fa-file-export mr-2 text-blue-500"></i>Poročila</h2>
+ <!-- REPORTS -->
+<section id="tab-reports" class="hidden">
+  <div class="card">
+    <h2 class="text-lg font-semibold mb-3"><i class="fas fa-file-export mr-2 text-blue-500"></i>Poročila</h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
-        <div><label class="block text-sm font-medium mb-1">Od</label><input type="date" id="repFrom"></div>
-        <div><label class="block text-sm font-medium mb-1">Do</label><input type="date" id="repTo"></div>
-        <div><label class="block text-sm font-medium mb-1">Projekt</label><select id="repProject"><option value="">Vsi</option></select></div>
-        <div><label class="block text-sm font-medium mb-1">Zaposleni</label><select id="repEmployee"><option value="">Vsi</option></select></div>
-        <div class="flex items-end"><button id="repRefresh" class="btn btn-primary w-full"><i class="fas fa-rotate"></i> Osveži</button></div>
+    <!-- Filtri -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
+      <div>
+        <label class="block text-sm font-medium mb-1">Od</label>
+        <input type="date" id="repFrom">
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-        <div class="card kpi"><h4 class="font-semibold mb-2"><i class="fas fa-user-clock mr-2 text-blue-500"></i>Prisotnost — ure po projektih</h4><ul id="kpiPresenceProj" class="space-y-1"></ul></div>
-        <div class="card kpi"><h4 class="font-semibold mb-2"><i class="fas fa-user mr-2 text-blue-500"></i>Prisotnost — ure po zaposlenih</h4><ul id="kpiPresenceEmp" class="space-y-1"></ul></div>
-        <div class="card kpi"><h4 class="font-semibold mb-2"><i class="fas fa-diagram-project mr-2 text-blue-500"></i>Dnevnik — ure po projektih</h4><ul id="kpiJobsProj" class="space-y-1"></ul></div>
-        <div class="card kpi"><h4 class="font-semibold mb-2"><i class="fas fa-people-group mr-2 text-blue-500"></i>Dnevnik — ure po zaposlenih</h4><ul id="kpiJobsEmp" class="space-y-1"></ul></div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Do</label>
+        <input type="date" id="repTo">
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <h3 class="font-semibold mb-2">Evidenca prisotnosti (vrstice)</h3>
-          <div class="max-h-96 overflow-auto border rounded-lg">
-            <table class="w-full border-collapse">
-              <thead><tr><th class="border p-2">Datum</th><th class="border p-2">Projekt</th><th class="border p-2">Zaposleni</th><th class="border p-2" style="width:80px">Ure</th></tr></thead>
-              <tbody id="tblPresence"></tbody>
-            </table>
-          </div>
-        </div>
-        <div>
-          <h3 class="font-semibold mb-2">Dnevnik del (vrstice)</h3>
-          <div class="max-h-96 overflow-auto border rounded-lg">
-            <table class="w-full border-collapse">
-              <thead><tr><th class="border p-2">Datum</th><th class="border p-2">Projekt</th><th class="border p-2">Zaposleni</th><th class="border p-2">Aktivnost</th><th class="border p-2" style="width:80px">Ure</th></tr></thead>
-              <tbody id="tblJobs"></tbody>
-            </table>
-          </div>
-        </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Projekt</label>
+        <select id="repProject"><option value="">Vsi</option></select>
       </div>
-
-      <div class="flex flex-wrap gap-2 mt-4">
-        <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel mr-1"></i> Excel (.xlsx)</button>
-        <button id="exportPdf" class="btn btn-outline"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+      <div>
+        <label class="block text-sm font-medium mb-1">Zaposleni</label>
+        <select id="repEmployee"><option value="">Vsi</option></select>
+      </div>
+      <div class="flex items-end gap-2">
+        <button id="repRefresh" class="btn btn-primary w-full"><i class="fas fa-rotate"></i> Osveži</button>
       </div>
     </div>
-  </section>
+
+    <!-- KPI povzetki -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+      <div class="card kpi">
+        <h4 class="font-semibold mb-2"><i class="fas fa-user-clock mr-2 text-blue-500"></i>Prisotnost — ure po projektih</h4>
+        <ul id="kpiPresenceProj" class="space-y-1"></ul>
+      </div>
+      <div class="card kpi">
+        <h4 class="font-semibold mb-2"><i class="fas fa-user mr-2 text-blue-500"></i>Prisotnost — ure po zaposlenih</h4>
+        <ul id="kpiPresenceEmp" class="space-y-1"></ul>
+      </div>
+      <div class="card kpi">
+        <h4 class="font-semibold mb-2"><i class="fas fa-diagram-project mr-2 text-blue-500"></i>Dnevnik — ure po projektih</h4>
+        <ul id="kpiJobsProj" class="space-y-1"></ul>
+      </div>
+      <div class="card kpi">
+        <h4 class="font-semibold mb-2"><i class="fas fa-people-group mr-2 text-blue-500"></i>Dnevnik — ure po zaposlenih</h4>
+        <ul id="kpiJobsEmp" class="space-y-1"></ul>
+      </div>
+    </div>
+
+    <!-- Podrobne tabele -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <h3 class="font-semibold mb-2">Evidenca prisotnosti (vrstice)</h3>
+        <div class="max-h-96 overflow-auto border rounded-lg">
+          <table class="w-full border-collapse">
+            <thead><tr><th class="border p-2">Datum</th><th class="border p-2">Projekt</th><th class="border p-2">Zaposleni</th><th class="border p-2" style="width:80px">Ure</th></tr></thead>
+            <tbody id="tblPresence"></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h3 class="font-semibold mb-2">Dnevnik del (vrstice)</h3>
+        <div class="max-h-96 overflow-auto border rounded-lg">
+          <table class="w-full border-collapse">
+            <thead><tr><th class="border p-2">Datum</th><th class="border p-2">Projekt</th><th class="border p-2">Zaposleni</th><th class="border p-2">Aktivnost</th><th class="border p-2" style="width:80px">Ure</th></tr></thead>
+            <tbody id="tblJobs"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Izvoz -->
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button id="exportExcel" class="btn btn-primary"><i class="fas fa-file-excel mr-1"></i> Excel (.xlsx)</button>
+      <button id="exportPdf"   class="btn btn-outline"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+    </div>
+  </div>
+
+  <!-- ===== NOVO: Poročilo dnevnikov (po projektih) ===== -->
+  <div class="card mt-6">
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <h2 class="text-lg font-semibold"><i class="fas fa-book mr-2 text-blue-500"></i>Poročilo dnevnikov</h2>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500">Skupine:</label>
+        <select id="drPeriod" class="text-sm">
+          <option value="day">po dnevih</option>
+          <option value="month">po mesecih</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- leva: seznam projektov -->
+      <div>
+        <h3 class="font-semibold mb-2">Projekti</h3>
+        <ul id="drProjects" class="space-y-2 max-h-96 overflow-auto border rounded-lg p-2"></ul>
+      </div>
+
+      <!-- desna: podrobnosti -->
+      <div class="lg:col-span-2">
+        <div id="drEmpty" class="text-gray-500 text-sm">Izberi projekt na levi.</div>
+
+        <div id="drDetails" class="hidden space-y-4">
+          <div>
+            <h3 id="drProjectTitle" class="font-semibold"></h3>
+            <div id="drProjectAddress" class="text-sm text-gray-500"></div>
+          </div>
+
+          <div>
+            <h4 class="font-semibold mb-1">Poraba materiala (<span id="drAggLabel">po dnevih</span>)</h4>
+            <div class="max-h-80 overflow-auto border rounded-lg">
+              <table class="w-full border-collapse">
+                <thead>
+                  <tr><th class="border p-2">Skupina</th><th class="border p-2">Material</th><th class="border p-2">Količina</th><th class="border p-2">Enota</th></tr>
+                </thead>
+                <tbody id="drMaterials"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="font-semibold mb-1">Aktivnosti po dnevih</h4>
+            <div id="drActivities" class="space-y-2 max-h-80 overflow-auto"></div>
+          </div>
+
+          <div>
+            <h4 class="font-semibold mb-1">Slike</h4>
+            <div id="drPhotos" class="flex flex-wrap gap-2 border rounded-lg p-2 max-h-60 overflow-auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
   <!-- ADMIN -->
   <section id="tab-admin" class="hidden">
