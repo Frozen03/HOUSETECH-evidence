@@ -1,6 +1,4 @@
-// server/server.js
 require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
@@ -9,69 +7,56 @@ const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 const crypto = require("crypto");
 
-// -------------------- Konfiguracija --------------------
 const app = express();
+
+/* ------------ Config ------------ */
 const PORT = process.env.PORT || 8787;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*"; // po potrebi zamenjaj z domeno
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
-// CORS (preveri origin, ali pusti vse)
-app.use(cors({ origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN, credentials: false }));
-app.use(express.json({ limit: "1mb" }));
-
-if (!GOOGLE_CLIENT_ID) {
-  console.warn("⚠️  GOOGLE_CLIENT_ID manjka v okolju (.env). Google verifikacija ne bo delovala!");
-}
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
-
-// -------------------- Data dir (Render /data -> fallback) --------------------
-function resolveWritableDir(preferred, fallback) {
-  try {
-    fs.mkdirSync(preferred, { recursive: true });
-    fs.accessSync(preferred, fs.constants.W_OK);
-    console.log("Using data dir:", preferred);
-    return preferred;
-  } catch (e) {
-    console.warn(`⚠️  '${preferred}' ni zapisljiv (${e.code}). Uporabljam fallback: '${fallback}'.`);
-    fs.mkdirSync(fallback, { recursive: true });
-    return fallback;
-  }
-}
-
-const PREFERRED_DATA = process.env.DATA_DIR || (process.env.RENDER ? "/data" : path.join(__dirname, "data"));
-const FALLBACK_DATA  = path.join(__dirname, "data");
-const DATA_DIR       = resolveWritableDir(PREFERRED_DATA, FALLBACK_DATA);
-
-// Poti do JSON datotek
-const USERS_PATH     = path.join(DATA_DIR, "users.json");
-const PROJECTS_PATH  = path.join(DATA_DIR, "projects.json");
+// Render disk je /data; lokalno uporabimo ../data
+const DATA_DIR =
+  process.env.DATA_DIR ||
+  (fs.existsSync("/data") ? "/data" : path.join(__dirname, "..", "data"));
+const USERS_PATH = path.join(DATA_DIR, "users.json");
+const PROJECTS_PATH = path.join(DATA_DIR, "projects.json");
 const MATERIALS_PATH = path.join(DATA_DIR, "materials.json");
 
-// Ustvari prazne datoteke, če manjkajo
-function ensureFile(p, emptyValue) {
-  if (!fs.existsSync(p)) {
-    fs.writeFileSync(p, JSON.stringify(emptyValue, null, 2));
-  }
-}
-ensureFile(USERS_PATH, {});
-ensureFile(PROJECTS_PATH, []);
-ensureFile(MATERIALS_PATH, []);
+// Frontend
+const WEB_DIR = path.join(__dirname, "..", "web");
 
-// Loader/saver helperji
-const readJson  = (p, fallback) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return fallback; } };
+/* ------------ Middleware ------------ */
+app.use(
+  cors({
+    origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN.split(",").map(s => s.trim()),
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: "1mb" }));
+
+/* ------------ Init data dir & files ------------ */
+fs.mkdirSync(DATA_DIR, { recursive: true });
+for (const p of [USERS_PATH, PROJECTS_PATH, MATERIALS_PATH]) {
+  if (!fs.existsSync(p)) fs.writeFileSync(p, JSON.stringify(p.includes("users") ? {} : []));
+}
+
+/* ------------ Utils ------------ */
+const readJson = (p, fallback) => {
+  try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return fallback; }
+};
 const writeJson = (p, data) => fs.writeFileSync(p, JSON.stringify(data, null, 2));
 
-// In-memory cache
-let users     = readJson(USERS_PATH, {});
-let projects  = readJson(PROJECTS_PATH, []);
+let users = readJson(USERS_PATH, {});
+let projects = readJson(PROJECTS_PATH, []);
 let materials = readJson(MATERIALS_PATH, []);
 
-const saveUsers     = () => writeJson(USERS_PATH, users);
-const saveProjects  = () => writeJson(PROJECTS_PATH, projects);
+const saveUsers = () => writeJson(USERS_PATH, users);
+const saveProjects = () => writeJson(PROJECTS_PATH, projects);
 const saveMaterials = () => writeJson(MATERIALS_PATH, materials);
 
-// -------------------- JWT & avtorizacija --------------------
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+
 const signJWT = (user) =>
   jwt.sign({ sub: user.email, roles: user.roles || [] }, JWT_SECRET, { expiresIn: "7d" });
 
@@ -87,20 +72,16 @@ function authRequired(req, res, next) {
     return res.status(401).json({ error: "Neveljaven žeton" });
   }
 }
+const requireRole = (allowed) => (req, res, next) =>
+  (req.user?.roles || []).some(r => allowed.includes(r)) ? next() : res.status(403).json({ error: "Ni dovoljenja" });
 
-function requireRole(roleArr) {
-  return (req, res, next) => {
-    const roles = req.user?.roles || [];
-    if (roles.some((r) => roleArr.includes(r))) return next();
-    return res.status(403).json({ error: "Ni dovoljenja" });
-  };
-}
-
-// -------------------- Auth: Google Sign-In verify --------------------
+/* ------------ Auth ------------ */
 app.post("/auth/google/verify", async (req, res) => {
   try {
     const { credential } = req.body || {};
-    if (!credential) return res.status(400).json({ error: "Manjka credential" });
+    if (!credential || !googleClient || !GOOGLE_CLIENT_ID) {
+      return res.status(400).json({ error: "Manjka GOOGLE_CLIENT_ID ali credential" });
+    }
 
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
@@ -110,22 +91,20 @@ app.post("/auth/google/verify", async (req, res) => {
     const email = payload?.email?.toLowerCase();
     if (!email) return res.status(400).json({ error: "Ni emaila v Google tokenu" });
 
-    // Strežniški whitelist – če ni v users.json: zavrni
+    // whitelist
     const u = users[email];
-    if (!u) {
-      return res.status(403).json({ error: "Uporabnik ni dodan. Obrni se na administratorja." });
-    }
+    if (!u) return res.status(403).json({ error: "Uporabnik ni dodan. Obrni se na administratorja." });
 
     const userOut = { email, name: u.name || email, roles: u.roles || [] };
-    const accessToken = signJWT({ email, roles: userOut.roles });
+    const accessToken = signJWT(userOut);
     return res.json({ access_token: accessToken, user: userOut });
   } catch (e) {
-    console.error("Google verify error:", e?.message || e);
+    console.error("Google verify error:", e.message);
     return res.status(401).json({ error: "Neuspešna verifikacija" });
   }
 });
 
-// -------------------- USERS (Owner/CEO) --------------------
+/* ------------ Users ------------ */
 app.get("/users", authRequired, (req, res) => res.json(users));
 
 app.post("/users", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
@@ -158,7 +137,7 @@ app.delete("/users/:email", authRequired, requireRole(["Owner", "CEO"]), (req, r
   res.status(204).end();
 });
 
-// -------------------- PROJECTS --------------------
+/* ------------ Projects ------------ */
 app.get("/projects", authRequired, (req, res) => res.json(projects));
 
 app.post("/projects", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
@@ -179,17 +158,17 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
   res.status(204).end();
 });
 
-// -------------------- MATERIALS --------------------
-// GET: vsi materiali za autocomplete
+/* ------------ Materials ------------ */
 app.get("/materials", authRequired, (req, res) => res.json(materials));
 
-// POST: upsert po imenu (idempotentno)
 app.post("/materials", authRequired, (req, res) => {
   const name = String(req.body?.name || "").trim();
   const uom = String(req.body?.uom || "kos").trim();
   if (!name) return res.status(400).json({ error: "Manjka 'name'." });
 
-  const existing = materials.find((m) => m.name.trim().toLowerCase() === name.toLowerCase());
+  const existing = materials.find(
+    (m) => m.name.trim().toLowerCase() === name.toLowerCase()
+  );
   if (existing) {
     existing.uom = uom || existing.uom;
     saveMaterials();
@@ -201,18 +180,13 @@ app.post("/materials", authRequired, (req, res) => {
   res.status(201).json(m);
 });
 
-// -------------------- Health & Root --------------------
-app.get("/", (_req, res) => res.type("text/plain").send("HOUSETECH Ops API is live"));
+/* ------------ Health (optional) ------------ */
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-// -------------------- Frontend (serve /web) --------------------
-const WEB_DIR = path.join(__dirname, "..", "web");   // server/server.js -> ../web
+/* ------------ Serve frontend (web/) ------------ */
 app.use(express.static(WEB_DIR, { extensions: ["html"] }));
 
-// health still available
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
-
-// Catch-all for client routing (but keep API routes working)
+// Catch-all za SPA, vendar pusti API poti pri miru
 app.get("*", (req, res, next) => {
   const p = req.path;
   if (
@@ -221,14 +195,13 @@ app.get("*", (req, res, next) => {
     p.startsWith("/projects") ||
     p.startsWith("/materials") ||
     p.startsWith("/healthz")
-  ) return next(); // let API handlers process it
-
-  // serve SPA entry
+  ) return next();
   res.sendFile(path.join(WEB_DIR, "index.html"));
 });
 
-// -------------------- Start --------------------
+/* ------------ Start ------------ */
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Data dir: ${DATA_DIR}`);
+  console.log(`Serving WEB from: ${WEB_DIR}`);
+  console.log(`DATA dir: ${DATA_DIR}`);
 });
