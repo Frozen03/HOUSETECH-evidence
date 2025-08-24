@@ -308,7 +308,9 @@
 
   /* ===== Konfiguracija ===== */
   const GOOGLE_CLIENT_ID = "149127907023-ip3jqct2vmqc4tm4jm4bfoogd1pqfpsv.apps.googleusercontent.com";
-  const API_BASE = "https://api.housetech.si";
+  const API_BASE = (location.hostname === "localhost";
+  ? 'http://localhost:8787'
+  : '';
 
   let accessToken = localStorage.getItem("jwt") || null;
   let me = localStorage.getItem("me") ? JSON.parse(localStorage.getItem("me")) : null;
