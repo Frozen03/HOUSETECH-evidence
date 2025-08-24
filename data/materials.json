@@ -1,0 +1,27 @@
+[
+  {
+    "id": "mat-1",
+    "name": "kabel 3x1,5",
+    "uom": "m"
+  },
+  {
+    "id": "mat-2",
+    "name": "Vtičnica TemČatež",
+    "uom": "kos"
+  },
+  {
+    "id": "mat-3",
+    "name": "doza Ø60",
+    "uom": "kos"
+  },
+  {
+    "id": "2df9ced7-ecd3-41ec-a77e-908191bf3726",
+    "name": "kabel 5x1,5",
+    "uom": "m"
+  },
+  {
+    "id": "ac03d2a1-f757-4dd6-8b7b-32b41d84af94",
+    "name": "led trak",
+    "uom": "m"
+  }
+]

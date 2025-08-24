@@ -1,0 +1,22 @@
+{
+  "info@housetech.si": {
+    "name": "HOUSETECH",
+    "roles": [
+      "Owner"
+    ]
+  },
+  "jon.rutar@gmail.com": {
+    "name": "Jon",
+    "roles": [
+      "Owner",
+      "CEO"
+    ]
+  },
+  "nace.mlakar46@gmail.com": {
+    "name": "Nace",
+    "roles": [
+      "Owner",
+      "CEO"
+    ]
+  }
+}
