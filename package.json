@@ -2,7 +2,7 @@
   "name": "housetech-ops-server",
   "version": "1.0.0",
   "type": "commonjs",
-  "main": "server.js",
+  "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server.js"
