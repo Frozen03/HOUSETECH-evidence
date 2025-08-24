@@ -6,7 +6,7 @@ services:
     plan: starter           # lahko tudi free za test, a brez persistent diska
     branch: main
     buildCommand: cd server && npm install
-    startCommand: node server.js
+    startCommand: node server/server.js
     autoDeploy: true
 
     # Environment variables
