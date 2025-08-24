@@ -7,7 +7,7 @@ services:
     branch: main
     buildCommand: cd server && npm install
     startCommand: node server/server.js
-    autoDeploy: true
+    autoDeploy: false
 
     # Environment variables
     envVars:
