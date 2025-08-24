@@ -205,6 +205,28 @@ app.post("/materials", authRequired, (req, res) => {
 app.get("/", (_req, res) => res.type("text/plain").send("HOUSETECH Ops API is live"));
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
+// -------------------- Frontend (serve /web) --------------------
+const WEB_DIR = path.join(__dirname, "..", "web");   // server/server.js -> ../web
+app.use(express.static(WEB_DIR, { extensions: ["html"] }));
+
+// health still available
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
+// Catch-all for client routing (but keep API routes working)
+app.get("*", (req, res, next) => {
+  const p = req.path;
+  if (
+    p.startsWith("/auth") ||
+    p.startsWith("/users") ||
+    p.startsWith("/projects") ||
+    p.startsWith("/materials") ||
+    p.startsWith("/healthz")
+  ) return next(); // let API handlers process it
+
+  // serve SPA entry
+  res.sendFile(path.join(WEB_DIR, "index.html"));
+});
+
 // -------------------- Start --------------------
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
