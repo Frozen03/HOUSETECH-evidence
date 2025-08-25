@@ -99,7 +99,8 @@
       <button data-tab="time" class="tab-btn tab-active"><i class="far fa-clock mr-2"></i>Evidenca ur</button>
       <button id="tabBtnPlan" data-tab="plan" class="tab-btn tab-inactive hidden"><i class="fas fa-calendar-alt mr-2"></i>Plan dela (BETA)</button>
       <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
-      <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
+      <button id="tabBtnDiaries" data-tab="diaries" class="tab-btn tab-inactive hidden"><i class="fas fa-book mr-2"></i>Dnevniki</button>
+      <button data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
       <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
     </div>
   </nav>
@@ -176,12 +177,58 @@
             <button id="addMaterialRow" type="button" class="btn btn-outline mt-2"><i class="fas fa-plus"></i> Dodaj material</button>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium mb-1">Fotografije/Video</label>
+            <input type="file" id="logMedia" multiple accept="image/*,video/*" class="w-full border rounded-lg p-2">
+          </div>
+
           <div class="flex justify-end"><button id="addLog" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Shrani vnos</button></div>
         </div>
 
         <hr class="my-4" style="border-color:var(--border)" />
         <h3 class="text-md font-semibold mb-2"><i class="fas fa-history mr-2 text-blue-500"></i>Zgodovina vnosov</h3>
         <div id="logList" class="space-y-3 text-sm max-h-96 overflow-y-auto pr-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Dnevniki ===== -->
+  <section id="tab-diaries" class="hidden">
+    <div class="card">
+      <h2 class="text-lg font-semibold mb-3"><i class="fas fa-book mr-2 text-blue-500"></i>Dnevniki del</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Od</label>
+          <input type="date" id="diaryFrom" class="w-full">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Do</label>
+          <input type="date" id="diaryTo" class="w-full">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Projekt</label>
+          <select id="diaryProject" class="w-full">
+            <option value="">Vsi projekti</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Prikaži po</label>
+          <select id="diaryGroupBy" class="w-full">
+            <option value="total">Skupno</option>
+            <option value="monthly">Mesečno</option>
+            <option value="daily">Dnevno</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mb-4">
+        <button id="diaryRefresh" class="btn btn-primary"><i class="fas fa-refresh mr-1"></i> Osveži</button>
+        <button id="diaryExport" class="btn btn-outline"><i class="fas fa-download mr-1"></i> Izvozi</button>
+      </div>
+
+      <div id="diaryResults" class="space-y-4">
+        <!-- Results will be populated here -->
       </div>
     </div>
   </section>
@@ -292,10 +339,12 @@ let materialsCatalog = {}; let materials = [];
 
 const isOwner = () => (me?.roles||[]).includes('Owner');
 const isOwnerOrCeo = () => (me?.roles||[]).some(r => r==='Owner' || r==='CEO');
+const isManager = () => (me?.roles||[]).some(r => r==='Owner' || r==='CEO' || r==='vodja');
+const isEmployee = () => (me?.roles||[]).some(r => r==='zaposlen' || r==='študent');
 
 /* ===== Tabs ===== */
 function selectTab(name){
-  ["time","plan","jobs","reports","admin"].forEach(t=>{
+  ["time","plan","jobs","diaries","reports","admin"].forEach(t=>{
     document.getElementById("tab-"+t).classList.add("hidden");
     const btn = document.querySelector(`[data-tab="${t}"]`);
     if(btn){ btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); }
@@ -307,6 +356,7 @@ function selectTab(name){
   if(name==="admin"){ adminReload(); }
   if(name==="reports"){ prepareReportFilters(); renderReports(); }
   if(name==="plan"){ renderCalendar(); }
+  if(name==="diaries"){ loadDiaries(); }
 }
 document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>selectTab(btn.getAttribute("data-tab"))));
 
@@ -323,8 +373,9 @@ async function handleGoogleCredentialResponse(response){
 
     // vidnost zavihkov
     document.getElementById('tabBtnReports')?.classList.toggle('hidden', !isOwnerOrCeo());
-    document.getElementById('tabBtnAdmin').style.display = isOwnerOrCeo() ? 'inline-block' : 'none';
-    document.getElementById('tabBtnPlan')?.classList.toggle('hidden', !isOwnerOrCeo());
+    document.getElementById('tabBtnAdmin')?.classList.toggle('hidden', !isOwnerOrCeo());
+    document.getElementById('tabBtnPlan')?.classList.toggle('hidden', !isManager());
+    document.getElementById('tabBtnDiaries')?.classList.toggle('hidden', !isManager());
 
     showAppAfterLogin(); selectTab('time');
   }catch(e){ alert("Prijava ni uspela: " + e.message); }
@@ -362,7 +413,7 @@ function showLoggedOut(){
 }
 document.getElementById('signOut')?.addEventListener('click', ()=>{
   localStorage.clear(); accessToken=null; me=null; showLoggedOut();
-  ["time","plan","jobs","reports","admin"].forEach(t=>document.getElementById("tab-"+t)?.classList.add("hidden"));
+  ["time","plan","jobs","diaries","reports","admin"].forEach(t=>document.getElementById("tab-"+t)?.classList.add("hidden"));
 });
 
 /* ===== Bootstrap data ===== */
@@ -382,6 +433,7 @@ function renderProjects(){
   if (cp) cp.innerHTML='<option value="">— izberi —</option>'+projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
   if (lp) lp.innerHTML=projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
   const rp=document.getElementById('repProject'); if (rp){ rp.innerHTML = '<option value="">Vsi</option>' + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); }
+  const dp=document.getElementById('diaryProject'); if (dp){ dp.innerHTML = '<option value="">Vsi projekti</option>' + projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); }
 }
 function renderEmployeesFilter(){
   const re = document.getElementById('repEmployee'); if(!re) return;
@@ -503,48 +555,78 @@ function renderMaterials(){
 }
 window.onMatNameInput=(idx,val)=>{ materials[idx].name=val; const info=materialsCatalog[val]; if(info && info.uom){ materials[idx].uom=info.uom; renderMaterials(); } };
 
-/* ===== Lokalna evidenca (enako kot prej) ===== */
-const store={ timeEntries:JSON.parse(localStorage.getItem('timeEntries')||'[]'),
-              jobLogs:JSON.parse(localStorage.getItem('jobLogs')||'[]') };
-function saveLocal(){ localStorage.setItem('timeEntries',JSON.stringify(store.timeEntries));
-                      localStorage.setItem('jobLogs',JSON.stringify(store.jobLogs));
-                      renderTimeEntries(); renderJobLogs(); if(!document.getElementById('tab-reports').classList.contains('hidden')) renderReports(); }
-const resolvedName=email=>(usersDir[email]?.name)||me?.name||email;
-const fmt=ts=>new Date(ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
-const dmy=ts=>new Date(ts).toLocaleDateString('sl-SI');
-const projectName=id=>(projects.find(p=>p.id===id)?.name)||'';
-
-["clockIn","clockOut","breakStart","breakEnd"].forEach(id=>{
-  const btn=document.getElementById(id);
-  if(btn){ btn.addEventListener('click',()=>{ const map={clockIn:'prihod',clockOut:'odhod',breakStart:'malica-začetek',breakEnd:'malica-konec'}; addTime(map[id]); }); }
-});
-function addTime(type){
+/* ===== Online shranjevanje ===== */
+async function addTime(type){
   if(!me) return alert("Najprej se prijavi.");
   const pid=document.getElementById('currentProject').value||null;
-  const emp=resolvedName(me.email);
-  store.timeEntries.push({id:crypto.randomUUID(),employee:emp,email:me.email,projectId:pid,type,ts:Date.now()});
-  saveLocal();
+  try {
+    const res = await fetch(API_BASE + "/presence", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken
+      },
+      body: JSON.stringify({
+        type: type,
+        projectId: pid
+      })
+    });
+    if (!res.ok) throw new Error("Napaka pri shranjevanju");
+    renderTimeEntries();
+  } catch (e) {
+    alert("Napaka: " + e.message);
+  }
 }
-function deleteTimeEntry(id){
+async function deleteTimeEntry(id){
   if(!confirm("Odstranim vnos?")) return;
-  const idx = store.timeEntries.findIndex(e => e.id===id && e.email===me.email);
-  if (idx>=0){ store.timeEntries.splice(idx,1); saveLocal(); }
+  try {
+    const res = await fetch(API_BASE + "/presence/" + id, {
+      method: "DELETE",
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    });
+    if (!res.ok) throw new Error("Napaka pri brisanju");
+    renderTimeEntries();
+  } catch (e) {
+    alert("Napaka: " + e.message);
+  }
 }
-function renderTimeEntries(){
+async function renderTimeEntries(){
   const ul=document.getElementById('todayEntries');
-  const today=new Date(); const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()).getTime(); const end=start+86400000;
-  const entries=store.timeEntries.filter(e=>e.ts>=start && e.ts<end).sort((a,b)=>a.ts-b.ts);
-  if(!entries.length){ ul.innerHTML='<li class="text-center py-4" style="color:var(--muted)"><i class="far fa-clock text-2xl mb-2"></i><p>Ni vnosov za danes.</p></li>'; return; }
-  ul.innerHTML=entries.map(e=>`
-    <li class="p-3 rounded-lg flex items-center justify-between" style="border:1px solid var(--border);">
-      <div class="flex items-center"><i class="far fa-clock mr-2"></i>
-        <div>
-          <div class="font-medium">${e.type} ob ${fmt(e.ts)}</div>
-          <div class="text-xs" style="color:var(--muted)">${e.employee} • ${projectName(e.projectId)||"Brez projekta"}</div>
+  const today=new Date(); 
+  const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()).getTime(); 
+  const end=start+86400000;
+  
+  try {
+    const res = await fetch(API_BASE + "/presence?from=" + start + "&to=" + end, {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    });
+    if (!res.ok) throw new Error("Napaka pri pridobivanju podatkov");
+    
+    const entries = await res.json();
+    const filtered = entries.filter(e => e.email === me.email).sort((a,b)=>a.ts-b.ts);
+    
+    if(!filtered.length){ 
+      ul.innerHTML='<li class="text-center py-4" style="color:var(--muted)"><i class="far fa-clock text-2xl mb-2"></i><p>Ni vnosov za danes.</p></li>'; 
+      return; 
+    }
+    
+    ul.innerHTML=filtered.map(e=>`
+      <li class="p-3 rounded-lg flex items-center justify-between" style="border:1px solid var(--border);">
+        <div class="flex items-center"><i class="far fa-clock mr-2"></i>
+          <div>
+            <div class="font-medium">${e.type} ob ${new Date(e.ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'})}</div>
+            <div class="text-xs" style="color:var(--muted)">${e.employee} • ${projectName(e.projectId)||"Brez projekta"}</div>
+          </div>
         </div>
-      </div>
-      ${e.email===me?.email ? `<button class="btn btn-outline !py-1 !px-2 text-xs" onclick="deleteTimeEntry('${e.id}')"><i class="fas fa-trash"></i></button>` : ``}
-    </li>`).join('');
+        <button class="btn btn-outline !py-1 !px-2 text-xs" onclick="deleteTimeEntry('${e.id}')"><i class="fas fa-trash"></i></button>
+      </li>`).join('');
+  } catch (e) {
+    ul.innerHTML='<li class="text-center py-4" style="color:var(--muted)">Napaka pri nalaganju podatkov.</li>';
+  }
 }
 
 document.getElementById("addLog")?.addEventListener("click", async ()=>{
@@ -553,26 +635,269 @@ document.getElementById("addLog")?.addEventListener("click", async ()=>{
   const activity = document.getElementById("logActivity").value.trim();
   const hours = parseFloat(document.getElementById("logHours").value || "0");
   if (!pid || !activity || !hours) return alert("Izpolni: projekt, aktivnost, ure.");
+  
+  // Upload media files if any
+  const mediaFiles = document.getElementById("logMedia").files;
+  let photos = [];
+  
+  if (mediaFiles.length > 0) {
+    const formData = new FormData();
+    for (let i = 0; i < mediaFiles.length; i++) {
+      formData.append("photos", mediaFiles[i]);
+    }
+    
+    try {
+      const uploadRes = await fetch(API_BASE + "/upload", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + accessToken
+        },
+        body: formData
+      });
+      
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        photos = uploadData.files || [];
+      }
+    } catch (e) {
+      console.error("Napaka pri nalaganju medija:", e);
+    }
+  }
+  
   const mats = (materials || []).filter(m => (m.name && m.name.trim()) || parseFloat(m.qty || "0") > 0);
-  store.jobLogs.push({ id: crypto.randomUUID(), projectId: pid, activity, hours, employee: resolvedName(me.email), email: me.email, materials: mats, ts: Date.now() });
-  document.getElementById("logActivity").value = ""; document.getElementById("logHours").value = "";
-  materials = []; renderMaterials(); saveLocal();
+  
+  try {
+    const res = await fetch(API_BASE + "/jobs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + accessToken
+      },
+      body: JSON.stringify({
+        projectId: pid,
+        activity: activity,
+        hours: hours,
+        materials: mats,
+        photos: photos
+      })
+    });
+    
+    if (!res.ok) throw new Error("Napaka pri shranjevanju");
+    
+    document.getElementById("logActivity").value = ""; 
+    document.getElementById("logHours").value = "";
+    document.getElementById("logMedia").value = "";
+    materials = []; 
+    renderMaterials(); 
+    renderJobLogs();
+  } catch (e) {
+    alert("Napaka: " + e.message);
+  }
 });
-function renderJobLogs(){
+
+async function renderJobLogs(){
   const wrap=document.getElementById('logList');
-  if(!store.jobLogs.length){ wrap.innerHTML='<div class="text-center py-4" style="color:var(--muted)"><i class="fas fa-tasks text-2xl mb-2"></i><p>Ni shranjenih vnosov.</p></div>'; return; }
-  wrap.innerHTML=store.jobLogs.slice().reverse().map(j=>`
-    <div class="p-3 rounded-lg" style="border:1px solid var(--border);">
-      <div class="flex items-start justify-between">
-        <div class="flex-1">
-          <div class="font-medium"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}</div>
-          <div class="mt-1 text-sm">${j.activity} • ${j.employee} • ${j.hours} h</div>
-          ${j.materials?.length ? `<div class="mt-2 text-xs" style="color:var(--muted)">Materiali: ${j.materials.map(m=>`${m.name} (${m.qty||0} ${m.uom||''})`).join(', ')}</div>`:''}
+  try {
+    const res = await fetch(API_BASE + "/jobs", {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    });
+    
+    if (!res.ok) throw new Error("Napaka pri pridobivanju podatkov");
+    
+    const logs = await res.json();
+    const myLogs = logs.filter(j => j.email === me.email).sort((a,b) => b.ts - a.ts);
+    
+    if(!myLogs.length){ 
+      wrap.innerHTML='<div class="text-center py-4" style="color:var(--muted)"><i class="fas fa-tasks text-2xl mb-2"></i><p>Ni shranjenih vnosov.</p></div>'; 
+      return; 
+    }
+    
+    wrap.innerHTML=myLogs.map(j=>`
+      <div class="p-3 rounded-lg" style="border:1px solid var(--border);">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="font-medium"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}</div>
+            <div class="mt-1 text-sm">${j.activity} • ${j.employee} • ${j.hours} h</div>
+            ${j.materials?.length ? `<div class="mt-2 text-xs" style="color:var(--muted)">Materiali: ${j.materials.map(m=>`${m.name} (${m.qty||0} ${m.uom||''})`).join(', ')}</div>`:''}
+            ${j.photos?.length ? `
+              <div class="mt-2">
+                <div class="text-xs font-semibold mb-1">Mediji:</div>
+                <div class="flex flex-wrap gap-2">
+                  ${j.photos.map(p => 
+                    p.mime.startsWith('image/') ? 
+                    `<a href="${API_BASE}${p.url}" target="_blank"><img src="${API_BASE}${p.url}" class="w-16 h-16 object-cover rounded border"></a>` :
+                    `<a href="${API_BASE}${p.url}" target="_blank" class="flex items-center justify-center w-16 h-16 bg-gray-100 rounded border"><i class="fas fa-video text-xl"></i></a>`
+                  ).join('')}
+                </div>
+              </div>
+            `:''}
+          </div>
+          <div class="text-xs" style="color:var(--muted)">${new Date(j.ts).toLocaleDateString('sl-SI')}</div>
         </div>
-        <div class="text-xs" style="color:var(--muted)">${dmy(j.ts)}</div>
-      </div>
-    </div>`).join('');
+      </div>`).join('');
+  } catch (e) {
+    wrap.innerHTML='<div class="text-center py-4" style="color:var(--muted)">Napaka pri nalaganju podatkov.</div>';
+  }
 }
+
+/* ===== Dnevniki ===== */
+async function loadDiaries(){
+  if (!isManager()) return;
+  
+  const from = document.getElementById('diaryFrom').value;
+  const to = document.getElementById('diaryTo').value;
+  const projectId = document.getElementById('diaryProject').value;
+  const groupBy = document.getElementById('diaryGroupBy').value;
+  
+  try {
+    // Get jobs data
+    let jobsUrl = API_BASE + "/jobs";
+    if (from && to) {
+      const fromTs = new Date(from).getTime();
+      const toTs = new Date(to).getTime() + 86400000 - 1; // End of day
+      jobsUrl += `?from=${fromTs}&to=${toTs}`;
+      if (projectId) jobsUrl += `&projectId=${projectId}`;
+    }
+    
+    const jobsRes = await fetch(jobsUrl, {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    });
+    
+    if (!jobsRes.ok) throw new Error("Napaka pri pridobivanju dnevnikov");
+    
+    const jobs = await jobsRes.json();
+    
+    // Group data
+    const groupedData = {};
+    
+    jobs.forEach(job => {
+      const date = new Date(job.ts);
+      let key;
+      
+      if (groupBy === 'daily') {
+        key = date.toLocaleDateString('sl-SI');
+      } else if (groupBy === 'monthly') {
+        key = `${date.getMonth() + 1}/${date.getFullYear()}`;
+      } else {
+        key = 'total';
+      }
+      
+      if (!groupedData[key]) {
+        groupedData[key] = {
+          materials: {},
+          hours: 0,
+          jobs: []
+        };
+      }
+      
+      // Sum hours
+      groupedData[key].hours += job.hours;
+      
+      // Sum materials
+      if (job.materials && job.materials.length) {
+        job.materials.forEach(mat => {
+          const matKey = mat.name + '|' + mat.uom;
+          if (!groupedData[key].materials[matKey]) {
+            groupedData[key].materials[matKey] = {
+              name: mat.name,
+              uom: mat.uom,
+              qty: 0
+            };
+          }
+          groupedData[key].materials[matKey].qty += parseFloat(mat.qty || 0);
+        });
+      }
+      
+      // Add job to list
+      groupedData[key].jobs.push(job);
+    });
+    
+    // Render results
+    const resultsEl = document.getElementById('diaryResults');
+    resultsEl.innerHTML = '';
+    
+    Object.keys(groupedData).forEach(key => {
+      const group = groupedData[key];
+      const materialsList = Object.values(group.materials);
+      
+      const groupEl = document.createElement('div');
+      groupEl.className = 'card';
+      groupEl.innerHTML = `
+        <h3 class="font-semibold mb-2">${groupBy === 'total' ? 'Skupaj' : key}</h3>
+        <div class="mb-3">
+          <div class="text-sm"><span class="font-medium">Skupaj ur:</span> ${group.hours.toFixed(2)}</div>
+          ${materialsList.length ? `
+            <div class="text-sm mt-2">
+              <div class="font-medium mb-1">Porabljen material:</div>
+              <ul class="list-disc list-inside">
+                ${materialsList.map(m => `<li>${m.name}: ${m.qty} ${m.uom}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+        <div>
+          <div class="font-medium mb-2">Posamezni vnosi:</div>
+          <div class="space-y-3">
+            ${group.jobs.map(j => `
+              <div class="p-3 border rounded-lg">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <div class="font-medium">${projectName(j.projectId)}</div>
+                    <div class="text-sm">${j.activity} • ${j.employee} • ${j.hours} h</div>
+                    ${j.materials?.length ? `
+                      <div class="text-xs mt-1">Materiali: ${j.materials.map(m => `${m.name} (${m.qty} ${m.uom})`).join(', ')}</div>
+                    ` : ''}
+                    ${j.photos?.length ? `
+                      <div class="mt-2">
+                        <div class="text-xs font-semibold mb-1">Mediji:</div>
+                        <div class="flex flex-wrap gap-1">
+                          ${j.photos.map(p => 
+                            p.mime.startsWith('image/') ? 
+                            `<a href="${API_BASE}${p.url}" target="_blank"><img src="${API_BASE}${p.url}" class="w-12 h-12 object-cover rounded border"></a>` :
+                            `<a href="${API_BASE}${p.url}" target="_blank" class="flex items-center justify-center w-12 h-12 bg-gray-100 rounded border"><i class="fas fa-video"></i></a>`
+                          ).join('')}
+                        </div>
+                      </div>
+                    ` : ''}
+                  </div>
+                  <div class="text-xs text-gray-500">${new Date(j.ts).toLocaleDateString('sl-SI')}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      resultsEl.appendChild(groupEl);
+    });
+    
+  } catch (e) {
+    document.getElementById('diaryResults').innerHTML = `
+      <div class="text-center py-4 text-red-500">
+        Napaka pri nalaganju podatkov: ${e.message}
+      </div>
+    `;
+  }
+}
+
+// Set default dates for diaries
+function setDefaultDiaryDates() {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  document.getElementById('diaryFrom').value = firstDay.toISOString().split('T')[0];
+  document.getElementById('diaryTo').value = lastDay.toISOString().split('T')[0];
+}
+
+document.getElementById('diaryRefresh')?.addEventListener('click', loadDiaries);
+document.getElementById('diaryExport')?.addEventListener('click', () => {
+  alert("Funkcija izvoza bo implementirana v naslednji različici.");
+});
 
 /* ===== Poročila (skrajšano) ===== */
 function prepareReportFilters(){
@@ -594,7 +919,7 @@ const calGrid = document.getElementById('calGrid');
 document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
 document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await loadPlanMonth(); drawCalendar(); });
 document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth = new Date(); calMonth.setDate(1); await loadPlanMonth(); drawCalendar(); });
-document.getElementById('planSave')?.addEventListener('click', async ()=>{ if(!isOwnerOrCeo()) return alert('Samo Owner/CEO.'); await savePlanMonth(); });
+document.getElementById('planSave')?.addEventListener('click', async ()=>{ if(!isManager()) return alert('Samo Owner/CEO/vodja.'); await savePlanMonth(); });
 
 function ymd(d){ return d.toISOString().slice(0,10); }
 function monthStartKey(){ const d=new Date(calMonth); d.setDate(1); return ymd(d); }
@@ -606,7 +931,7 @@ async function renderCalendar(){ await loadPlanMonth(); drawCalendar(); }
 
 function drawCalendar(){
   document.getElementById('monthLabel').textContent = monthLabel();
-  document.getElementById('planPermNote').textContent = isOwnerOrCeo() ? 'Urejanje: Owner & CEO' : 'Samo ogled';
+  document.getElementById('planPermNote').textContent = isManager() ? 'Urejanje: Owner, CEO & vodja' : 'Samo ogled';
 
   // izračun mreže: začni na ponedeljku pred 1. v mesecu
   const first = new Date(calMonth); first.setDate(1); const firstWeekday = (first.getDay()+6)%7; // pon=0
@@ -629,15 +954,15 @@ function drawCalendar(){
         <div class="font-semibold">${projects.find(p=>p.id===it.projectId)?.name || '—'}</div>
         <div class="text-[11px]" style="color:var(--muted)">${(it.people||[]).map(e=>usersDir[e]?.name||e).join(', ')||'—'}</div>
         ${it.note?`<div class="text-[11px] italic mt-0.5">${it.note}</div>`:''}
-        ${isOwnerOrCeo() ? `
+        ${isManager() ? `
           <div class="flex justify-end gap-1 mt-1">
             <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
             <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
           </div>` : ``}
       </div>`).join('');
 
-    const addBtn = isOwnerOrCeo() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
-    const lockCls = isOwnerOrCeo() ? '' : 'cal-locked';
+    const addBtn = isManager() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+    const lockCls = isManager() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
 }
@@ -694,6 +1019,10 @@ async function savePlanMonth(){
   localStorage.setItem(monthStoreKey(), JSON.stringify(planMonth));
   alert('Plan shranjen lokalno (BETA).');
 }
+
+// Initialize
+setDefaultDiaryDates();
+document.getElementById('diaryRefresh')?.addEventListener('click', loadDiaries);
 </script>
 </body>
 </html>
