@@ -343,10 +343,17 @@ app.put("/workplan/month", authRequired, (req, res) => {
         if (ex.people.includes(email)) {
           const incStatuses = inc.statuses || {};
           if (Object.prototype.hasOwnProperty.call(incStatuses, email)) {
-            ex.statuses = ex.statuses || {};
-            ex.statuses[email] = incStatuses[email];
-            existingArr[i] = ex;
-          }
+  ex.statuses = ex.statuses || {};
+  const current = ex.statuses[email] || 'V teku';
+  const incoming = incStatuses[email];
+  // če je že Opravljeno, ne dovolimo spremembe nazaj
+  if (current === 'Opravljeno' && incoming !== 'Opravljeno') {
+    // ignoriraj poskus spremembe
+  } else {
+    ex.statuses[email] = incoming;
+  }
+  existingArr[i] = ex;
+}
         }
       }
       merged.days[dayKey] = existingArr;
