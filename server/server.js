@@ -17,7 +17,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
 // ====== PERSISTENCA ======
-const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "data");
+const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "../data");
 const WEB_DIR  = process.env.WEB_DIR  || path.resolve(__dirname, "../web");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
