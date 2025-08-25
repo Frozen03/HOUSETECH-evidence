@@ -912,8 +912,18 @@ async function renderWeek(){
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
   (planMonth.days[dayKey] ||= []);
   const it = planMonth.days[dayKey][idx]; if(!it) return;
-  it.statuses ||= {}; it.statuses[me.email] = val;
+  it.statuses ||= {};
+  const cur = it.statuses[me.email] || 'V teku';
+  if (cur === 'Opravljeno' && val !== 'Opravljeno') {
+    alert('Ta postavka je že označena kot Opravljeno in je zaklenjena.');
+    // osveži UI, da se select spet onemogoči (če je bil kako omogočen)
+    await renderWeek();
+    return;
+  }
+  it.statuses[me.email] = val;
   await savePlanMonth();
+  // takoj osvežimo, da se select zaklene
+  await renderWeek();
 };
 
 /* ===== DNEVNIKI (manager) ===== */
