@@ -19,18 +19,9 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "10mb" }));
 
-const PLAN_FILE = path.join(__dirname, "../data/plan.json");
-function readPlan() {
-  try { return JSON.parse(fs.readFileSync(PLAN_FILE, "utf8")); }
-  catch { return []; }
-}
-function savePlan(list) {
-  fs.writeFileSync(PLAN_FILE, JSON.stringify(list, null, 2));
-}
-
 // ----- Poti do podatkov -----
-const DATA_DIR = process.env.DATA_DIR || "/data";               // Render disk
-const WEB_DIR  = path.join(__dirname, "../web");
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
+const WEB_DIR  = path.join(__dirname, "web");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, "uploads"), { recursive: true });
@@ -40,10 +31,14 @@ const P = {
   projects:   path.join(DATA_DIR, "projects.json"),
   materials:  path.join(DATA_DIR, "materials.json"),
   presence:   path.join(DATA_DIR, "presence.json"),
-  jobs:       path.join(DATA_DIR, "jobs.json")
+  jobs:       path.join(DATA_DIR, "jobs.json"),
+  workplans:  path.join(DATA_DIR, "workplans")
 };
 
-function readJSON(file, fallback) {
+// Ensure workplans directory exists
+fs.mkdirSync(P.workplans, { recursive: true });
+
+function readJSON(file, fallback = []) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); }
   catch { return fallback; }
 }
@@ -134,61 +129,6 @@ app.post("/auth/google/verify", async (req, res) => {
     return res.status(401).json({ error: "Neuspešna verifikacija" });
   }
 });
-
-/* ===== PLAN DELA ===== */
-
-// GET /plan?from=ISO&to=ISO
-app.get("/plan", authRequired, (req, res) => {
-  const from = req.query.from ? new Date(req.query.from).getTime() : 0;
-  const to   = req.query.to   ? new Date(req.query.to).getTime()   : Date.now();
-  const list = readPlan().filter(p => {
-    const d = new Date(p.date).getTime();
-    return d >= from && d <= to;
-  });
-  res.json(list);
-});
-
-// POST /plan
-app.post("/plan", authRequired, (req, res) => {
-  const user = req.user;
-  if (!(user.roles.includes("Owner") || user.roles.includes("CEO"))) {
-    return res.status(403).json({ error: "Samo Owner/CEO lahko dodaja plan." });
-  }
-  const { date, employeeEmail, projectId, activity } = req.body;
-  if (!date || !employeeEmail || !projectId || !activity) {
-    return res.status(400).json({ error: "Manjkajo podatki" });
-  }
-
-  const plan = readPlan();
-  const item = {
-    id: crypto.randomUUID(),
-    date,
-    employeeEmail,
-    projectId,
-    activity,
-    createdBy: user.email,
-    ts: Date.now()
-  };
-  plan.push(item);
-  savePlan(plan);
-  res.json(item);
-});
-
-// DELETE /plan/:id
-app.delete("/plan/:id", authRequired, (req, res) => {
-  const user = req.user;
-  if (!(user.roles.includes("Owner") || user.roles.includes("CEO"))) {
-    return res.status(403).json({ error: "Samo Owner/CEO lahko briše plan." });
-  }
-  const id = req.params.id;
-  let plan = readPlan();
-  const before = plan.length;
-  plan = plan.filter(p => p.id !== id);
-  if (plan.length === before) return res.status(404).json({ error: "Ni najdeno" });
-  savePlan(plan);
-  res.json({ ok: true });
-});
-
 
 // ----- USERS -----
 app.get("/users", authRequired, (req, res) => res.json(users));
@@ -362,6 +302,43 @@ app.post("/upload", authRequired, upload.array("photos", 10), (req, res) => {
     mime: f.mimetype
   }));
   res.json({ files });
+});
+
+// ----- Workplan (mesečni plan) -----
+app.get("/workplan/month", authRequired, (req, res) => {
+  try {
+    const { start } = req.query;
+    if (!start) return res.status(400).json({ error: "Manjka parameter start" });
+    
+    const yearMonth = start.slice(0, 7); // YYYY-MM
+    const planFile = path.join(P.workplans, `plan-${yearMonth}.json`);
+    
+    if (fs.existsSync(planFile)) {
+      const data = JSON.parse(fs.readFileSync(planFile, "utf8"));
+      return res.json(data);
+    }
+    
+    // Vrnemo prazen plan, če še ne obstaja
+    res.json({ days: {} });
+  } catch (e) {
+    res.status(500).json({ error: "Napaka pri branju plana" });
+  }
+});
+
+app.put("/workplan/month", authRequired, requireRole(["Owner", "CEO", "vodja"]), (req, res) => {
+  try {
+    const { start, days } = req.body;
+    if (!start) return res.status(400).json({ error: "Manjka parameter start" });
+    
+    const yearMonth = start.slice(0, 7); // YYYY-MM
+    const planFile = path.join(P.workplans, `plan-${yearMonth}.json`);
+    
+    // Shranimo plan
+    fs.writeFileSync(planFile, JSON.stringify({ days }, null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Napaka pri shranjevanju plana" });
+  }
 });
 
 // ----- statika (frontend) -----
