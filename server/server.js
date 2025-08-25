@@ -1,3 +1,4 @@
+// POPRAVLJENA VERZIJA server.js – trajno shranjevanje podatkov + normalizacija people na e-maile
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -15,13 +16,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
-// ----- CORS & body parsers -----
-app.use(cors({ origin: CORS_ORIGIN, credentials: false, methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"] }));
-app.use(express.json({ limit: "20mb" })); // malo višji limit, ker frontend pošilja slike URL-je v jobih
-
-// ----- Poti do podatkov -----
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
-const WEB_DIR  = path.join(__dirname, "../web");
+// ====== PERSISTENCA ======
+const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "data");
+const WEB_DIR  = process.env.WEB_DIR  || path.resolve(__dirname, "../web");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, "uploads"), { recursive: true });
@@ -44,7 +41,6 @@ function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-// naloži ob zagonu
 let users     = readJSON(P.users, {});
 let projects  = readJSON(P.projects, []);
 let materials = readJSON(P.materials, []);
@@ -57,13 +53,11 @@ const saveMaterials = () => writeJSON(P.materials, materials);
 const savePresence  = () => writeJSON(P.presence, presence);
 const saveJobs      = () => writeJSON(P.jobs, jobs);
 
-// ----- Google OAuth -----
-if (!GOOGLE_CLIENT_ID) {
-  console.warn("⚠️  GOOGLE_CLIENT_ID manjka – prijava ne bo delovala.");
-}
+// ====== Google OAuth ======
+if (!GOOGLE_CLIENT_ID) console.warn("⚠️  GOOGLE_CLIENT_ID manjka – prijava ne bo delovala.");
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// ----- JWT helperji -----
+// ====== JWT helperji ======
 function signJWT(email, roles) {
   return jwt.sign({ sub: email, roles: roles || [] }, JWT_SECRET, { expiresIn: "7d" });
 }
@@ -91,7 +85,7 @@ function hasManagerRole(user) {
   return roles.includes("Owner") || roles.includes("CEO") || roles.includes("vodja");
 }
 
-// ----- Upload (fotografije/video) -----
+// ====== Upload ======
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(DATA_DIR, "uploads")),
   filename: (req, file, cb) => {
@@ -99,9 +93,8 @@ const storage = multer.diskStorage({
     cb(null, crypto.randomUUID() + ext);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024, files: 10 } }); // do 50MB na datoteko
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024, files: 10 } });
 
-// omogoči streženje naloženih datotek
 app.use("/uploads", express.static(path.join(DATA_DIR, "uploads")));
 
 // ====== Auth ======
@@ -129,195 +122,37 @@ app.post("/auth/google/verify", async (req, res) => {
   }
 });
 
-// ====== USERS ======
-app.get("/users", authRequired, (req, res) => res.json(users));
-
-app.post("/users", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
-  const { email, name } = req.body || {};
-  const key = String(email || "").trim().toLowerCase();
-  if (!key || !name) return res.status(400).json({ error: "email in name sta obvezna" });
-  if (!users[key]) users[key] = { name, roles: [] };
-  saveUsers();
-  res.status(201).json({ email: key, ...users[key] });
-});
-
-app.patch("/users/:email", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
-  const email = decodeURIComponent(req.params.email).toLowerCase();
-  if (!users[email]) return res.status(404).json({ error: "Uporabnik ne obstaja" });
-  const { name, roles } = req.body || {};
-  if (typeof name === "string") users[email].name = name;
-  if (Array.isArray(roles)) users[email].roles = roles;
-  saveUsers();
-  res.json({ email, ...users[email] });
-});
-
-app.delete("/users/:email", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
-  const email = decodeURIComponent(req.params.email).toLowerCase();
-  if (!users[email]) return res.status(404).json({ error: "Ni uporabnika" });
-  if ((users[email].roles || []).includes("Owner")) {
-    return res.status(403).json({ error: "Ownerja ni dovoljeno izbrisati." });
-  }
-  delete users[email];
-  saveUsers();
-  res.status(204).end();
-});
-
-// ====== PROJECTS ======
-app.get("/projects", authRequired, (req, res) => res.json(projects));
-
-app.post("/projects", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  const address = String(req.body?.address || "").trim();
-  if (!name) return res.status(400).json({ error: "Manjka name" });
-  const proj = { id: crypto.randomUUID(), name, address: address || "" };
-  projects.push(proj);
-  saveProjects();
-  res.status(201).json(proj);
-});
-
-app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
-  const id = req.params.id;
-  const before = projects.length;
-  projects = projects.filter(p => p.id !== id);
-  if (projects.length === before) return res.status(404).json({ error: "Ni projekta" });
-  saveProjects();
-  res.status(204).end();
-});
-
-// ====== MATERIALS ======
-app.get("/materials", authRequired, (req, res) => res.json(materials));
-
-app.post("/materials", authRequired, (req, res) => {
-  const name = String(req.body?.name || "").trim();
-  const uom = String(req.body?.uom || "kos").trim();
-  if (!name) return res.status(400).json({ error: "Manjka 'name'." });
-  const existing = materials.find(m => m.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    existing.uom = uom || existing.uom;
-    saveMaterials();
-    return res.json(existing);
-  }
-  const m = { id: crypto.randomUUID(), name, uom };
-  materials.push(m);
-  saveMaterials();
-  res.status(201).json(m);
-});
-
-// ====== PRESENCE (prisotnost) ======
-/*
-  type: "in" | "out" | "break-start" | "break-end"
-  item = { id, email, employee, projectId, type, ts }
-*/
-app.post("/presence", authRequired, (req, res) => {
-  const { type, projectId, ts } = req.body || {};
-  const ok = ["in", "out", "break-start", "break-end"];
-  if (!ok.includes(type)) return res.status(400).json({ error: "Neveljaven type" });
-  const email = req.user.email;
-  const employee = (users[email]?.name) || email;
-  const item = {
-    id: crypto.randomUUID(),
-    email,
-    employee,
-    projectId: projectId || null,
-    type,
-    ts: ts || Date.now()
-  };
-  presence.push(item);
-  savePresence();
-  res.status(201).json(item);
-});
-
-app.get("/presence", authRequired, (req, res) => {
-  const from = Number(req.query.from || 0);
-  const to   = Number(req.query.to   || 32503680000000); // 2999-12-31
-  const email = String(req.query.email || "");
-  const projectId = String(req.query.projectId || "");
-  const list = presence
-    .filter(p => p.ts >= from && p.ts <= to)
-    .filter(p => !email || p.email === email)
-    .filter(p => !projectId || p.projectId === projectId)
-    .sort((a,b) => a.ts - b.ts);
-  res.json(list);
-});
-
-app.delete("/presence/:id", authRequired, (req, res) => {
-  const id = req.params.id;
-  const i = presence.findIndex(p => p.id === id);
-  if (i === -1) return res.status(404).json({ error: "Ni vnosa" });
-  const owner = presence[i].email === req.user.email;
-  const admin = hasManagerRole(req.user) || (req.user.roles || []).includes("CEO") || (req.user.roles || []).includes("Owner");
-  if (!owner && !admin) return res.status(403).json({ error: "Ni dovoljenja" });
-  presence.splice(i, 1);
-  savePresence();
-  res.status(204).end();
-});
-
-// ====== JOB LOGS (dnevnik del) ======
-/*
-  item = { id, projectId, activity, hours, materials[], photos[], email, employee, ts }
-  photos[] = { url, name, size, mime }
-*/
-app.post("/jobs", authRequired, (req, res) => {
-  const { projectId, activity, hours, materials: mats, photos } = req.body || {};
-  if (!projectId || !String(activity || "").trim()) {
-    return res.status(400).json({ error: "Manjka projectId ali activity" });
-  }
-  const email = req.user.email;
-  const employee = users[email]?.name || email;
-  const item = {
-    id: crypto.randomUUID(),
-    projectId,
-    activity: String(activity).trim(),
-    hours: Number(hours || 0),
-    materials: Array.isArray(mats) ? mats : [],
-    photos: Array.isArray(photos) ? photos : [],
-    email,
-    employee,
-    ts: Date.now()
-  };
-  jobs.push(item);
-  saveJobs();
-  res.status(201).json(item);
-});
-
-app.get("/jobs", authRequired, (req, res) => {
-  const from = Number(req.query.from || 0);
-  const to   = Number(req.query.to   || 32503680000000);
-  const email = String(req.query.email || "");
-  const projectId = String(req.query.projectId || "");
-  const list = jobs
-    .filter(j => j.ts >= from && j.ts <= to)
-    .filter(j => !email || j.email === email)
-    .filter(j => !projectId || j.projectId === projectId)
-    .sort((a,b) => b.ts - a.ts);
-  res.json(list);
-});
-
-// ----- Upload fotografij/videa -----
-app.post("/upload", authRequired, upload.array("photos", 10), (req, res) => {
-  const files = (req.files || []).map(f => ({
-    url: `/uploads/${f.filename}`,
-    name: f.originalname || f.filename,
-    size: f.size,
-    mime: f.mimetype
-  }));
-  res.json({ files });
-});
+// ====== Helper za normalizacijo imena/emaila ======
+function toEmailLike(val) {
+  if (!val) return val;
+  const s = String(val).trim();
+  if (!s) return s;
+  if (s.includes("@")) return s.toLowerCase();
+  const hit = Object.entries(users).find(([,u]) => (u?.name || "").toLowerCase() === s.toLowerCase());
+  if (hit) return hit[0].toLowerCase();
+  return s;
+}
 
 // ====== Workplan (mesečni plan) ======
-// Struktura, ki jo pričakuje frontend: { days: { 'YYYY-MM-DD': [ { projectId, people:[email], note, statuses?: { [email]:'V teku'|'Opravljeno' } } ] } }
-
 app.get("/workplan/month", authRequired, (req, res) => {
   try {
     const { start } = req.query;
     if (!start) return res.status(400).json({ error: "Manjka parameter start" });
 
-    const yearMonth = String(start).slice(0, 7); // YYYY-MM
+    const yearMonth = String(start).slice(0, 7);
     const planFile = path.join(P.workplans, `plan-${yearMonth}.json`);
 
     if (fs.existsSync(planFile)) {
-      const data = JSON.parse(fs.readFileSync(planFile, "utf8"));
-      return res.json(data && typeof data === "object" ? data : { days: {} });
+      const raw = JSON.parse(fs.readFileSync(planFile, "utf8"));
+      if (raw && raw.days) {
+        for (const dayKey of Object.keys(raw.days)) {
+          raw.days[dayKey] = (raw.days[dayKey] || []).map(it => ({
+            ...it,
+            people: Array.isArray(it.people) ? it.people.map(toEmailLike) : []
+          }));
+        }
+      }
+      return res.json(raw);
     }
     return res.json({ days: {} });
   } catch (e) {
@@ -326,64 +161,53 @@ app.get("/workplan/month", authRequired, (req, res) => {
   }
 });
 
-/**
- * PUT /workplan/month
- * Managerji (Owner/CEO/vodja): lahko zamenjajo celoten mesec (days)
- * Zaposleni/študent: lahko posodobijo SAMO svoj status (statuses[email]) pri postavkah, kjer so v people.
- *  - Strežnik v tem primeru izvede MERGE nad obstoječim planom in ignorira vse druge spremembe.
- */
 app.put("/workplan/month", authRequired, (req, res) => {
   try {
     const { start, days } = req.body || {};
     if (!start || typeof days !== "object") return res.status(400).json({ error: "Manjka parameter start ali days" });
 
-    const yearMonth = String(start).slice(0, 7); // YYYY-MM
+    const yearMonth = String(start).slice(0, 7);
     const planFile = path.join(P.workplans, `plan-${yearMonth}.json`);
 
-    const exists = fs.existsSync(planFile);
-    const current = exists ? JSON.parse(fs.readFileSync(planFile, "utf8")) : { days: {} };
-    if (!current || typeof current !== "object" || typeof current.days !== "object") {
-      current.days = {};
-    }
+    const current = fs.existsSync(planFile) ? JSON.parse(fs.readFileSync(planFile, "utf8")) : { days: {} };
+    if (!current.days) current.days = {};
 
     const isManager = hasManagerRole(req.user);
-
     if (isManager) {
-      // Managerji zamenjajo celoten mesec
-      fs.writeFileSync(planFile, JSON.stringify({ days }, null, 2));
+      const normalized = { days: {} };
+      for (const dayKey of Object.keys(days)) {
+        const arr = Array.isArray(days[dayKey]) ? days[dayKey] : [];
+        normalized.days[dayKey] = arr.map(it => ({
+          ...it,
+          people: Array.isArray(it.people) ? it.people.map(toEmailLike) : []
+        }));
+      }
+      fs.writeFileSync(planFile, JSON.stringify(normalized, null, 2));
       return res.json({ success: true, mode: "replace" });
     }
 
-    // Zaposleni/študent -> samo merge osebnih statusov
-    const email = req.user.email;
+    // zaposleni: update samo statusa
+    const email = req.user.email.toLowerCase();
     const merged = { days: { ...current.days } };
-
-    // Sprehodimo se po dneh, ki jih je poslal klient
     for (const dayKey of Object.keys(days || {})) {
       const incomingArr = Array.isArray(days[dayKey]) ? days[dayKey] : [];
       const existingArr = Array.isArray(merged.days[dayKey]) ? merged.days[dayKey] : [];
-
-      // Po indeksih: klient uporablja isti vrstni red (frontend ne dodaja/briše v employee pogledu)
       const max = Math.min(incomingArr.length, existingArr.length);
       for (let i = 0; i < max; i++) {
         const inc = incomingArr[i] || {};
         const ex  = existingArr[i] || {};
-
-        // Update dovolimo samo, če je uporabnik v people
-        const people = Array.isArray(ex.people) ? ex.people : [];
-        if (!people.includes(email)) continue;
-
-        // Če je v inc.statuses podan status za trenutnega userja, ga zapišemo v existing
-        const incStatuses = (inc.statuses && typeof inc.statuses === "object") ? inc.statuses : {};
-        if (Object.prototype.hasOwnProperty.call(incStatuses, email)) {
-          ex.statuses = ex.statuses && typeof ex.statuses === "object" ? ex.statuses : {};
-          ex.statuses[email] = incStatuses[email];
-          existingArr[i] = ex; // zapiši nazaj
+        ex.people = Array.isArray(ex.people) ? ex.people.map(toEmailLike) : [];
+        if (ex.people.includes(email)) {
+          const incStatuses = inc.statuses || {};
+          if (Object.prototype.hasOwnProperty.call(incStatuses, email)) {
+            ex.statuses = ex.statuses || {};
+            ex.statuses[email] = incStatuses[email];
+            existingArr[i] = ex;
+          }
         }
       }
       merged.days[dayKey] = existingArr;
     }
-
     fs.writeFileSync(planFile, JSON.stringify(merged, null, 2));
     return res.json({ success: true, mode: "merge-status" });
   } catch (e) {
@@ -392,12 +216,9 @@ app.put("/workplan/month", authRequired, (req, res) => {
   }
 });
 
-// ====== statika (frontend) ======
-app.use("/", express.static(WEB_DIR, { index: "index.html", fallthrough: true }));
+// ====== statika ======
+app.use("/", express.static(WEB_DIR, { index: "index.html" }));
 app.get("/", (req, res) => res.sendFile(path.join(WEB_DIR, "index.html")));
-
-// (neobvezno) Healthcheck
-app.get("/healthz", (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
