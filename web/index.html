@@ -79,7 +79,19 @@
     <h2 class="text-lg font-semibold mb-3"><i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava</h2>
     <p class="text-sm mb-4" style="color:var(--muted)">Prijavi se z Google. Strežnik preveri ID token in izda JWT z vlogami (whitelist).</p>
     <div class="flex items-center gap-3">
-      <div id="g_id_signin"></div>
+      <!-- Google Identity (deklarativno) -->
+      <div id="g_id_onload"
+           data-client_id="149127907023-ip3jqct2vmqc4tm4jm4bfoogd1pqfpsv.apps.googleusercontent.com"
+           data-callback="handleGoogleCredentialResponse"
+           data-auto_prompt="false"></div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="large"
+           data-shape="rectangular"
+           data-theme="outline"
+           data-text="signin_with"
+           data-logo_alignment="left"></div>
+
       <button id="signOut" class="btn btn-outline hidden"><i class="fas fa-right-from-bracket"></i> Odjava</button>
     </div>
   </div>
@@ -357,24 +369,36 @@ document.querySelectorAll(".tab-btn").forEach(btn=>btn.addEventListener("click",
 /* ===== Google Sign-In ===== */
 async function handleGoogleCredentialResponse(response){
   try{
-    const res = await fetch(API_BASE + "/auth/google/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({credential:response.credential})});
-    if(!res.ok){ const err = await res.json().catch(()=>({})); throw new Error(err.error || "Neuspešna verifikacija"); }
+    if(!response || !response.credential){
+      console.error("GIS: callback brez credentiala", response);
+      alert("Prijava ni uspela: Google ni vrnil žetona (preveri, da ni blokiranih piškotkov/GSId).");
+      return;
+    }
+    const res = await fetch("/auth/google/verify",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ credential: response.credential })
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error || "Neuspešna verifikacija");
+    }
+
     const data = await res.json();
     accessToken = data.access_token; me = data.user;
-    localStorage.setItem("jwt", accessToken); localStorage.setItem("me", JSON.stringify(me));
+    localStorage.setItem("jwt", accessToken);
+    localStorage.setItem("me", JSON.stringify(me));
+
     await loadBootstrapData();
-
- applyRoleUI();
-
-    // vidnost zavihkov po vlogah
-    document.getElementById('tabBtnReports')?.classList.toggle('hidden', !isOwnerOrCeo());
-    document.getElementById('tabBtnAdmin').style.display = isOwnerOrCeo() ? 'inline-block' : 'none';
-    document.getElementById('tabBtnPlan')?.classList.toggle('hidden', !(isOwnerCeoVodja() || isEmployeeOrStudent()));
-    document.getElementById('tabBtnJournals')?.classList.toggle('hidden', !isOwnerCeoVodja());
-
-    showAppAfterLogin(); selectTab('time');
-  }catch(e){ alert("Prijava ni uspela: " + e.message); }
+    applyRoleUI();
+    showAppAfterLogin();
+    selectTab('time');
+  }catch(e){
+    alert("Prijava ni uspela: " + e.message);
+  }
 }
+
 function initGoogle(){
   if(!(window.google && google.accounts && google.accounts.id)) return false;
   try{
