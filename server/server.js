@@ -21,7 +21,7 @@ app.use(express.json({ limit: "10mb" }));
 
 // ----- Poti do podatkov -----
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
-const WEB_DIR  = path.join(__dirname, "web");
+const WEB_DIR  = path.join(__dirname, "../web");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(path.join(DATA_DIR, "uploads"), { recursive: true });
