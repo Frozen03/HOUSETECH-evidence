@@ -364,6 +364,8 @@ async function handleGoogleCredentialResponse(response){
     localStorage.setItem("jwt", accessToken); localStorage.setItem("me", JSON.stringify(me));
     await loadBootstrapData();
 
+ applyRoleUI();
+
     // vidnost zavihkov po vlogah
     document.getElementById('tabBtnReports')?.classList.toggle('hidden', !isOwnerOrCeo());
     document.getElementById('tabBtnAdmin').style.display = isOwnerOrCeo() ? 'inline-block' : 'none';
@@ -383,8 +385,55 @@ function initGoogle(){
 }
 window.addEventListener('load', ()=>{
   let tries=0; const t=setInterval(()=>{ if(initGoogle()||tries++>40) clearInterval(t); },100);
-  if(accessToken && me){ loadBootstrapData().then(()=>{ if (typeof renderProjects==="function") renderProjects(); showAppAfterLogin(); selectTab('time'); }); } else { showLoggedOut(); }
+  if(accessToken && me){
+    loadBootstrapData().then(()=>{
+      applyRoleUI(); 
+      if (typeof renderProjects==="function") renderProjects();
+      showAppAfterLogin();
+      selectTab('time');
+    });
+  } else {
+    showLoggedOut();
+  }
 });
+
+function applyRoleUI(){
+  // varnostno: če me še ni, nič ne skrivamo/kažemo
+  const roles = (me?.roles)||[];
+
+  const isOwner = roles.includes('Owner');
+  const isCEO   = roles.includes('CEO');
+  const isVodja = roles.includes('vodja');
+  const isMgr   = isOwner || isCEO || isVodja;
+  const isEmp   = roles.includes('zaposlen') || roles.includes('študent');
+
+  // Vidnost tab gumbov
+  const btnReports = document.getElementById('tabBtnReports');
+  const btnAdmin   = document.getElementById('tabBtnAdmin');
+  const btnPlan    = document.getElementById('tabBtnPlan');
+  const btnJrn     = document.getElementById('tabBtnJournals');
+
+  if (btnReports) btnReports.classList.toggle('hidden', !isOwner && !isCEO);
+  if (btnAdmin){
+    // Admin naj bo viden le Owner/CEO (pri tebi je bilo včasih display namesto hidden)
+    btnAdmin.classList.toggle('hidden', !(isOwner || isCEO));
+  }
+  if (btnPlan){
+    // Plan je viden managerjem (mesečni) in zaposlenim/študentom (tedenski)
+    btnPlan.classList.toggle('hidden', !(isMgr || isEmp));
+  }
+  if (btnJrn){
+    // Dnevniki samo managerji (Owner/CEO/vodja)
+    btnJrn.classList.toggle('hidden', !isMgr);
+  }
+
+  // Ko je izbran Plan: pokaži pravi pod-pogled
+  const monthWrap = document.getElementById('plan-month-wrap');
+  const weekWrap  = document.getElementById('plan-week-wrap');
+  if (monthWrap) monthWrap.classList.toggle('hidden', !isMgr);
+  if (weekWrap)  weekWrap.classList.toggle('hidden', !isEmp);
+}
+
 
 /* ===== UI helperji ===== */
 function showAppAfterLogin(){
@@ -392,6 +441,9 @@ function showAppAfterLogin(){
   document.getElementById('signOut')?.classList.remove('hidden');
   document.getElementById('statusBadge')?.classList.remove('hidden');
   document.getElementById('tabsNav')?.classList.remove('hidden');
+
+applyRoleUI();
+
   document.getElementById('presencePanel')?.classList.remove('hidden');
   document.getElementById('todayPanel')?.classList.remove('hidden');
   renderTimeEntries();
@@ -527,7 +579,7 @@ async function adminReload(){
   const u=await fetch(API_BASE+'/users',{headers:{Authorization:'Bearer '+accessToken}}); if(u.ok) usersDir=await u.json();
   const p=await fetch(API_BASE+'/projects',{headers:{Authorization:'Bearer '+accessToken}}); if(p.ok) projects=await p.json();
   const m=await fetch(API_BASE+'/materials',{headers:{Authorization:'Bearer '+accessToken}}); if(m.ok){ materialsCatalog = mapMaterialsToCatalog(await m.json()); }
-  renderUsersAdmin(); renderProjectsAdmin(); renderProjects(); renderMaterialsCatalogDatalist(); renderEmployeesFilter(); renderJournalsFilters();
+  renderUsersAdmin(); renderProjectsAdmin(); renderProjects(); renderMaterialsCatalogDatalist(); renderEmployeesFilter(); renderJournalsFilters(); applyRoleUI();
 }
 
 /* ===== Materiali & dnevnik (vnos) ===== */
