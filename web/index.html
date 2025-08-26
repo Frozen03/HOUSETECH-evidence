@@ -68,6 +68,22 @@
     .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
     .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
     .cal-locked{ opacity:.6; pointer-events:none; }
+
+/* header koledarja */
+.plan-header{ display:flex; gap:.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.plan-nav{ display:flex; gap:.5rem; align-items:center; }
+.plan-nav .btn{ padding:.4rem .7rem; }
+#monthLabel{ font-weight:600; font-size:1.05rem; min-width:auto; }
+
+.plan-kpis{ display:flex; gap:.5rem; align-items:center; }
+.kpi-pill{ border:1px solid var(--border); background:var(--tab-active); border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem; }
+.kpi-pill span{ font-weight:600; color:var(--muted); margin-left:.35rem; }
+
+.plan-filters{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0 .5rem; }
+.chip{ border:1px solid var(--border); background:var(--tab-inactive); border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
+.chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+
+
 /* barve za postavke v koledarju */
 .cal-item{ transition: background .2s, border-color .2s, color .2s; }
 .cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
@@ -131,6 +147,12 @@ select, input, textarea{ min-height:44px; }
   .week-grid .p-2 .font-medium{ font-size:.95rem; }
   .week-grid .p-2 .text-xs{ font-size:.8rem; }
   #weekLabel{ min-width:0; font-size:.95rem; }
+}
+
+/* na mobitelu naj vse lepo prelomi */
+@media (max-width:640px){
+  .plan-header{ align-items:flex-start; }
+  .plan-kpis{ width:100%; justify-content:flex-start; }
 }
     
   </style>
@@ -214,15 +236,42 @@ select, input, textarea{ min-height:44px; }
   <section id="tab-plan" class="hidden">
     <!-- Mesečni pogled za Owner/CEO/vodja -->
     <div id="plan-month-wrap" class="card hidden">
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div class="flex items-center gap-2">
-          <button id="monthPrev" class="btn btn-outline !py-1"><i class="fas fa-chevron-left"></i> Prejšnji</button>
-          <div id="monthLabel" class="font-semibold text-lg min-w-[200px] text-center"></div>
-          <button id="monthNext" class="btn btn-outline !py-1">Naslednji <i class="fas fa-chevron-right"></i></button>
-          <button id="monthToday" class="btn btn-outline !py-1"><i class="fas fa-dot-circle"></i> Danes</button>
-        </div>
-        <div class="text-sm" id="planPermNote" style="color:var(--muted)"></div>
-      </div>
+  <!-- NOV HEADER -->
+  <div class="plan-header mb-2">
+    <div class="plan-nav">
+      <button id="monthPrev" class="btn btn-outline !py-1"><i class="fas fa-chevron-left"></i></button>
+      <div id="monthLabel"></div>
+      <button id="monthNext" class="btn btn-outline !py-1"><i class="fas fa-chevron-right"></i></button>
+      <button id="monthToday" class="btn btn-outline !py-1">Danes</button>
+    </div>
+
+    <div class="plan-kpis">
+      <div class="kpi-pill"><i class="far fa-calendar-check mr-1"></i><span>Skupno</span> <b id="kpiAll">0</b></div>
+      <div class="kpi-pill"><i class="fas fa-circle-exclamation mr-1"></i><span>Visokih</span> <b id="kpiHigh">0</b></div>
+      <div class="kpi-pill"><i class="fas fa-check mr-1"></i><span>Opravljenih</span> <b id="kpiDone">0</b></div>
+    </div>
+  </div>
+
+  <!-- FILTER ČIPI -->
+  <div class="plan-filters">
+    <div class="text-xs" style="color:var(--muted)">Kategorije:</div>
+    <button class="chip active" data-cat="Vse">Vse</button>
+    <button class="chip" data-cat="General">Splošno</button>
+    <button class="chip" data-cat="Elektro">Elektro</button>
+    <button class="chip" data-cat="Programiranje">KNX</button>
+    <button class="chip" data-cat="Servis">Shelly</button>
+  </div>
+
+  <!-- TOLE SPODAJ PUSTIŠ, NE BRIŠI -->
+  <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
+    <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
+  </div>
+  <div id="calGrid" class="cal-grid"></div>
+  <div class="flex justify-end gap-2 mt-3">
+    <button id="planSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani plan</button>
+  </div>
+</div>
+
       <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
         <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
       </div>
