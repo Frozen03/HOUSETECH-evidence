@@ -62,99 +62,103 @@
     .tbl th,.tbl td { border:1px solid var(--border); padding:.5rem .6rem; font-size:.875rem; }
     .tbl th { background:var(--tab-inactive); text-align:left; }
 
-    /* koledar (mesečni plan) */
-    .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
-    .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
-    .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
-    .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
+    /* ===== Calendar facelift ===== */
+    .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.75rem; }
+    .cal-cell{
+      position:relative; background:var(--tab-active);
+      border:1px solid var(--border); border-radius:1rem; padding:.75rem .75rem .6rem;
+      min-height:150px; display:flex; flex-direction:column; overflow:hidden;
+    }
+    .dark-mode .cal-cell{ background:rgba(255,255,255,0.03); }
+    .cal-day{ display:flex; align-items:center; justify-content:space-between; color:var(--muted); margin-bottom:.35rem; }
+    .cal-day .dnum{ font-size:1.15rem; font-weight:800; color:var(--text); }
+    .cal-day .dwk{ font-size:.72rem; text-transform:lowercase; }
+    .cal-empty{ font-size:.8rem; font-style:italic; color:var(--muted); margin:.25rem 0 .4rem; }
+    .cal-add{
+      margin-top:.35rem; align-self:flex-start;
+      border:1px solid var(--border); border-radius:.75rem; padding:.35rem .65rem; font-size:.8rem;
+      background:transparent;
+    }
+    .cal-add:hover{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
     .cal-locked{ opacity:.6; pointer-events:none; }
 
-/* header koledarja */
-.plan-header{ display:flex; gap:.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-.plan-nav{ display:flex; gap:.5rem; align-items:center; }
-.plan-nav .btn{ padding:.4rem .7rem; }
-#monthLabel{ font-weight:600; font-size:1.05rem; min-width:auto; }
+    /* item card */
+    .cal-item{
+      position:relative; border:1px solid var(--border); background:var(--card);
+      border-radius:.75rem; padding:.5rem .55rem .55rem .8rem; margin-top:.45rem; font-size:.84rem;
+    }
+    .dark-mode .cal-item{ background:rgba(255,255,255,0.04); }
+    .cal-item .title{ font-weight:800; line-height:1.1; }
+    .cal-item .meta{ font-size:.72rem; color:var(--muted); margin-top:.18rem; }
+    .cal-item .note{ font-size:.72rem; opacity:.95; font-style:italic; margin-top:.18rem; }
+    .cal-item::before{
+      content:""; position:absolute; left:0; top:0; bottom:0; width:4px; border-radius:.75rem 0 0 .75rem;
+    }
+    .cal-actions{ position:absolute; top:.35rem; right:.35rem; display:flex; gap:.25rem; }
+    .cal-actions .icon{
+      border:1px solid var(--border); background:transparent; border-radius:.5rem;
+      width:22px; height:22px; display:grid; place-items:center; font-size:.7rem;
+    }
+    .cal-actions .icon:hover{ border-color:var(--primary); }
 
-.plan-kpis{ display:flex; gap:.5rem; align-items:center; }
-.kpi-pill{ border:1px solid var(--border); background:var(--tab-active); border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem; }
-.kpi-pill span{ font-weight:600; color:var(--muted); margin-left:.35rem; }
+    /* badge */
+    .badge{
+      display:inline-flex; align-items:center; gap:.35rem;
+      border-radius:999px; padding:.1rem .45rem; font-size:.68rem; font-weight:700;
+      border:1px solid var(--border); background:var(--tab-inactive);
+    }
 
-.plan-filters{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0 .5rem; }
-.chip{ border:1px solid var(--border); background:var(--tab-inactive); border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
-.chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+    /* category accent colors */
+    .cat-Splošno::before{ background:#64748B; }            /* siva */
+    .cat-Fina-montaža::before{ background:#22C55E; }        /* zelena */
+    .cat-Groba-montaža::before{ background:#EAB308; }       /* rumena */
+    .cat-Programiranje::before{ background:#3B82F6; }       /* modra */
+    .cat-Servis::before{ background:#A855F7; }              /* vijolična */
 
-
-/* barve za postavke v koledarju */
-.cal-item{ transition: background .2s, border-color .2s, color .2s; }
-.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
-.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
-.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; } /* rumena */
-.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
-
-    /* tedenski plan */
+    /* weekly plan & media */
     .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
     .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
     .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
 
-/* lepši sticky tabs na mobitelu */
-#tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
-.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
-.tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:.5rem; padding:.25rem; }
-.tab-btn{ border-radius:.75rem; }
+    /* nicer checkboxes (used in modal) */
+    input[type="checkbox"]{ width:18px; height:18px; accent-color:var(--primary); }
+    .person-check{
+      display:flex; align-items:center; gap:.6rem;
+      border:1px solid var(--border); border-radius:.75rem; padding:.45rem .6rem;
+      background:var(--tab-active);
+    }
+    .person-check:hover{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .person-check .sub{ font-size:.75rem; color:var(--muted); }
 
-/* večji “tap targets” */
-.btn{ min-height:44px; }
-select, input, textarea{ min-height:44px; }
+    /* sticky tabs on mobile */
+    #tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
+    .dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
+    .tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:.5rem; padding:.25rem; }
+    .tab-btn{ border-radius:.75rem; }
 
-/* kartice malo več “air” na telefonu */
-@media (max-width:640px){
-  .card{ padding:1rem; border-radius:1rem; }
-  header .text-2xl{ font-size:1.35rem; }
-  #authCard .g_id_signin, #authCard #g_id_onload{ transform:scale(0.95); transform-origin:left; }
-}
+    /* bigger tap targets */
+    .btn{ min-height:44px; }
+    select, input, textarea{ min-height:44px; }
 
-
-/* ===== Mobile tweaks for Plan dela ===== */
-@media (max-width: 1024px){
-  .tabs-wrap{ display:flex; overflow:auto; }
-  .tab-btn{ white-space:nowrap; font-size:.9rem; }
-  /* mesečni koledar: 4 stolpci na tablici */
-  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
-}
-
-@media (max-width: 768px){
-  h1{ font-size:1.25rem; }
-  .card{ padding:1rem; }
-  /* mesečni koledar: 3 stolpci na “velikem” telefonu */
-  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-  /* tedenski pogled: dva stolpca */
-  .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-
-@media (max-width: 640px){
-  .tabs-wrap{ gap:.25rem; }
-  .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
-
-  /* mesečni koledar: 2 stolpca na telefonu */
-  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .cal-cell{ min-height:150px; }
-
-  /* tedenski pogled: 1 stolpec – po dnevu pod seboj */
-  .week-grid{ grid-template-columns: 1fr; }
-  /* status select ne prekriva drugih elementov */
-  .week-grid .p-2 .mt-2{ flex-wrap:wrap; }
-  .week-grid .p-2 select{ width:100%; }
-  .week-grid .p-2 .font-medium{ font-size:.95rem; }
-  .week-grid .p-2 .text-xs{ font-size:.8rem; }
-  #weekLabel{ min-width:0; font-size:.95rem; }
-}
-
-/* na mobitelu naj vse lepo prelomi */
-@media (max-width:640px){
-  .plan-header{ align-items:flex-start; }
-  .plan-kpis{ width:100%; justify-content:flex-start; }
-}
-    
+    /* responsive tweaks */
+    @media (max-width: 1024px){
+      .tabs-wrap{ display:flex; overflow:auto; }
+      .tab-btn{ white-space:nowrap; font-size:.9rem; }
+      .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+    }
+    @media (max-width: 768px){
+      h1{ font-size:1.25rem; } .card{ padding:1rem; }
+      .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+    @media (max-width: 640px){
+      .tabs-wrap{ gap:.25rem; } .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
+      .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .cal-cell{ min-height:150px; }
+      .week-grid{ grid-template-columns:1fr; }
+      #weekLabel{ min-width:0; font-size:.95rem; }
+      .plan-header{ align-items:flex-start; } .plan-kpis{ width:100%; justify-content:flex-start; }
+    }
   </style>
 </head>
 <body>
@@ -975,32 +979,46 @@ function drawCalendar(){
     const key = ymd(d);
     const inMonth = d.getMonth() === calMonth.getMonth();
     const items = planMonth.days[key] || [];
-    const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
+
+    const weekday = d.toLocaleDateString('sl-SI', { weekday:'short' });
+    const hdr = `
+      <div class="cal-day">
+        <span class="dnum">${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>
+        <span class="dwk">${weekday}</span>
+      </div>`;
 
     const list = items.map((it, idx) => {
-      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e).join(', ') || '—';
       const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
       const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
+      const cat = it.category || 'Splošno';
+      const catCls = 'cat-' + cat.replace(/\s+/g,'-');
 
       return `
-        <div class="cal-item ${colorCls}">
-          <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-          ${isOwnerCeoVodja() ? `
-            <div class="flex justify-end gap-1 mt-1">
-              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-            </div>` : ''}
+        <div class="cal-item ${colorCls} ${catCls}">
+          <div class="cal-actions">
+            ${isOwnerCeoVodja() ? `
+              <button class="icon" title="Uredi" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+              <button class="icon" title="Izbriši" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+            ` : ``}
+          </div>
+          <div class="title">${it.title ? it.title : projName}</div>
+          <div class="meta">
+            <span class="badge">${cat}</span>
+            ${it.time ? ` • ${it.time}` : ``}
+            ${peopleNames ? ` • ${peopleNames}` : ``}
+          </div>
+          ${it.note ? `<div class="note">${it.note}</div>` : ``}
         </div>`;
     }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+    const empty = !items.length ? `<div class="cal-empty">Ni nalog</div>` : '';
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="cal-add" onclick="addPlanItem('${key}')">+ Dodaj</button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
-    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
+    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${empty}${addBtn}</div>`;
   }).join('');
 
-countMonthStats();
+  countMonthStats();
 }
 
 /* -------- KPI & Filter -------- */
