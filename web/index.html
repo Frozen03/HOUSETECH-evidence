@@ -930,33 +930,30 @@ function drawCalendar(){
     const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
 
     const list = items.map((it,idx)=>{
-  const proj = projects.find(p=>p.id===it.projectId)?.name || '—';
-  const st = (it.statuses||{})[me.email] || 'V teku';
-  const teamArr = (it.people||[])
-    .filter(e => e && e !== me.email)
-    .map(e => usersDir[e]?.name || e);
-  const teamLine = teamArr.length
-    ? `Ekipa: ${teamArr.join(', ')}`
-    : `Ekipa: — (samo ti)`;
-
-  const locked = st === 'Opravljeno' ? 'disabled' : '';
-
-  return `<div class="p-2 border rounded-lg mb-1">
-    <div class="font-medium">${proj}</div>
-    ${it.note?`<div class="text-xs" style="color:var(--muted)">${it.note}</div>`:''}
-    <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-    <div class="mt-2 flex items-center gap-2">
-      <label class="text-xs">Status:</label>
-      <select class="text-xs border rounded px-2 py-1"
-              onchange="updatePersonalStatus('${key}',${idx}, this.value)"
-              ${locked}>
-        <option ${st==='V teku'?'selected':''}>V teku</option>
-        <option ${st==='Opravljeno'?'selected':''}>Opravljeno</option>
-      </select>
-      ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-    </div>
-  </div>`;
-}).join('');
+      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name || e);
+      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name||e);
+      const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
+      return `<div class="cal-item">
+      const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+      return `<div class="cal-item ${colorCls}">
+        <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
+        <div class="text-[11px]" style="color:var(--muted)">
+          ${it.time ? it.time+' • ' : ''}${peopleNames.join(', ') || '—'}
+        </div>
+        ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+        <div class="text-[11px]" style="color:var(--muted)">${it.time? it.time+' • ' : ''}${peopleNames.join(', ')||'—'}</div>
+        ${it.note?`<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>`:''}
+        ${isOwnerCeoVodja() ? `
+          <div class="flex justify-end gap-1 mt-1">
+            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]"
+                    onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]"
+                    onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
+          </div>` : ``}
+      </div>`;
+    }).join('');
     const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
@@ -1096,8 +1093,9 @@ async function renderWeek(){
     const key = ymd(d);
     const items = (planMonth.days[key]||[]).filter(it => (it.people||[]).includes(me.email));
     const list = items.map((it,idx)=>{
-      const proj = projects.find(p=>p.id===it.projectId)?.name || '—';
-      const st = (it.statuses||{})[me.email] || 'V teku';
+  const proj = projects.find(p=>p.id===it.projectId)?.name || '—';
+  const st = (it.statuses||{})[me.email] || 'V teku';
+
   const teamArr = (it.people||[])
     .filter(e => e && e !== me.email)
     .map(e => usersDir[e]?.name || e);
@@ -1108,8 +1106,8 @@ async function renderWeek(){
   const locked = st === 'Opravljeno' ? 'disabled' : '';
 
   return `<div class="p-2 border rounded-lg mb-1">
-    <div class="font-medium">${proj}</div>
-    ${it.note?`<div class="text-xs" style="color:var(--muted)">${it.note}</div>`:''}
+    <div class="font-medium">${it.title ? it.title : proj}</div>
+    ${it.note?`<div class="text-xs italic text-[var(--muted)] mt-0.5">${it.note}</div>`:''}
     <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
     <div class="mt-2 flex items-center gap-2">
       <label class="text-xs">Status:</label>
@@ -1122,6 +1120,8 @@ async function renderWeek(){
       ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
     </div>
   </div>`;
+}).join('');
+
     }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
     return `<div class="border rounded-lg p-2">
       <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
