@@ -931,7 +931,6 @@ function drawCalendar(){
 
     const list = items.map((it,idx)=>{
       const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name || e);
-      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name||e);
       const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
       return `<div class="cal-item">
       const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
