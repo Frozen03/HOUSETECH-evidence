@@ -72,6 +72,42 @@
     .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
     .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
     .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
+
+/* ===== Mobile tweaks for Plan dela ===== */
+@media (max-width: 1024px){
+  .tabs-wrap{ display:flex; overflow:auto; }
+  .tab-btn{ white-space:nowrap; font-size:.9rem; }
+  /* mesečni koledar: 4 stolpci na tablici */
+  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+
+@media (max-width: 768px){
+  h1{ font-size:1.25rem; }
+  .card{ padding:1rem; }
+  /* mesečni koledar: 3 stolpci na “velikem” telefonu */
+  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  /* tedenski pogled: dva stolpca */
+  .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 640px){
+  .tabs-wrap{ gap:.25rem; }
+  .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
+
+  /* mesečni koledar: 2 stolpca na telefonu */
+  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .cal-cell{ min-height:150px; }
+
+  /* tedenski pogled: 1 stolpec – po dnevu pod seboj */
+  .week-grid{ grid-template-columns: 1fr; }
+  /* status select ne prekriva drugih elementov */
+  .week-grid .p-2 .mt-2{ flex-wrap:wrap; }
+  .week-grid .p-2 select{ width:100%; }
+  .week-grid .p-2 .font-medium{ font-size:.95rem; }
+  .week-grid .p-2 .text-xs{ font-size:.8rem; }
+  #weekLabel{ min-width:0; font-size:.95rem; }
+}
+    
   </style>
 </head>
 <body>
