@@ -931,25 +931,19 @@ function drawCalendar(){
 
     const list = items.map((it, idx) => {
   const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
-  const projName = projects.find(p => p.id === it.projectId)?.name || '—';
-
-  // barva glede na status
-  const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+  const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
+  const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
   return `
     <div class="cal-item ${colorCls}">
       <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-      <div class="text-[11px]" style="color:var(--muted)">
-        ${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}
-      </div>
+      <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
       ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
       ${isOwnerCeoVodja() ? `
         <div class="flex justify-end gap-1 mt-1">
-          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]"
-                  onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-          <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]"
-                  onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-        </div>` : ``}
+          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+        </div>` : ''}
     </div>`;
 }).join('');
 
@@ -1089,36 +1083,30 @@ async function renderWeek(){
   wg.innerHTML = days.map(d=>{
     const key = ymd(d);
     const items = (planMonth.days[key]||[]).filter(it => (it.people||[]).includes(me.email));
-    const list = items.map((it,idx)=>{
-  const proj = projects.find(p=>p.id===it.projectId)?.name || '—';
-  const st = (it.statuses||{})[me.email] || 'V teku';
+    const list = items.map((it, idx) => {
+  const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+  const st   = (it.statuses || {})[me.email] || 'V teku';
 
-  const teamArr = (it.people||[])
-    .filter(e => e && e !== me.email)
-    .map(e => usersDir[e]?.name || e);
-  const teamLine = teamArr.length
-    ? `Ekipa: ${teamArr.join(', ')}`
-    : `Ekipa: — (samo ti)`;
+  const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
+  const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
+  const locked   = st === 'Opravljeno' ? 'disabled' : '';
 
-  const locked = st === 'Opravljeno' ? 'disabled' : '';
-
-  return `<div class="p-2 border rounded-lg mb-1">
-    <div class="font-medium">${it.title ? it.title : proj}</div>
-    ${it.note?`<div class="text-xs italic text-[var(--muted)] mt-0.5">${it.note}</div>`:''}
-    <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-    <div class="mt-2 flex items-center gap-2">
-      <label class="text-xs">Status:</label>
-      <select class="text-xs border rounded px-2 py-1"
-              onchange="updatePersonalStatus('${key}',${idx}, this.value)"
-              ${locked}>
-        <option ${st==='V teku'?'selected':''}>V teku</option>
-        <option ${st==='Opravljeno'?'selected':''}>Opravljeno</option>
-      </select>
-      ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-    </div>
-  </div>`;
+  return `
+    <div class="p-2 border rounded-lg mb-1">
+      <div class="font-medium">${it.title ? it.title : proj}</div>
+      ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
+      <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
+      <div class="mt-2 flex items-center gap-2">
+        <label class="text-xs">Status:</label>
+        <select class="text-xs border rounded px-2 py-1"
+                onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
+          <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
+          <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
+        </select>
+        ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+      </div>
+    </div>`;
 }).join('');
-
     }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
     return `<div class="border rounded-lg p-2">
       <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
