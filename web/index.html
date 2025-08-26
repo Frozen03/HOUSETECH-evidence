@@ -932,7 +932,6 @@ function drawCalendar(){
     const list = items.map((it,idx)=>{
   const proj = projects.find(p=>p.id===it.projectId)?.name || '—';
   const st = (it.statuses||{})[me.email] || 'V teku';
-
   const teamArr = (it.people||[])
     .filter(e => e && e !== me.email)
     .map(e => usersDir[e]?.name || e);
@@ -943,8 +942,8 @@ function drawCalendar(){
   const locked = st === 'Opravljeno' ? 'disabled' : '';
 
   return `<div class="p-2 border rounded-lg mb-1">
-    <div class="font-medium">${it.title ? it.title : proj}</div>
-    ${it.note?`<div class="text-xs italic text-[var(--muted)] mt-0.5">${it.note}</div>`:''}
+    <div class="font-medium">${proj}</div>
+    ${it.note?`<div class="text-xs" style="color:var(--muted)">${it.note}</div>`:''}
     <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
     <div class="mt-2 flex items-center gap-2">
       <label class="text-xs">Status:</label>
@@ -958,8 +957,6 @@ function drawCalendar(){
     </div>
   </div>`;
 }).join('');
-
-
     const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
