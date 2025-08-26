@@ -1080,39 +1080,42 @@ async function renderWeek(){
   document.getElementById('weekLabel').textContent =
     `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
   const wg = document.getElementById('weekGrid');
-  wg.innerHTML = days.map(d=>{
-    const key = ymd(d);
-    const items = (planMonth.days[key]||[]).filter(it => (it.people||[]).includes(me.email));
-    const list = items.map((it, idx) => {
-  const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-  const st   = (it.statuses || {})[me.email] || 'V teku';
+  wg.innerHTML = days.map(d => {
+  const key   = ymd(d);
+  const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
 
-  const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
-  const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
-  const locked   = st === 'Opravljeno' ? 'disabled' : '';
+  const list = items.map((it, idx) => {
+    const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+    const st   = (it.statuses || {})[me.email] || 'V teku';
+
+    const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
+    const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
+    const locked   = st === 'Opravljeno' ? 'disabled' : '';
+
+    return `
+      <div class="p-2 border rounded-lg mb-1">
+        <div class="font-medium">${it.title ? it.title : proj}</div>
+        ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
+        <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
+        <div class="mt-2 flex items-center gap-2">
+          <label class="text-xs">Status:</label>
+          <select class="text-xs border rounded px-2 py-1"
+                  onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
+            <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
+            <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
+          </select>
+          ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+        </div>
+      </div>`;
+  }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
 
   return `
-    <div class="p-2 border rounded-lg mb-1">
-      <div class="font-medium">${it.title ? it.title : proj}</div>
-      ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
-      <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-      <div class="mt-2 flex items-center gap-2">
-        <label class="text-xs">Status:</label>
-        <select class="text-xs border rounded px-2 py-1"
-                onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
-          <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
-          <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
-        </select>
-        ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-      </div>
-    </div>`;
-}).join('');
-    }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
-    return `<div class="border rounded-lg p-2">
+    <div class="border rounded-lg p-2">
       <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
       ${list}
     </div>`;
-  }).join('');
+}).join('');
+
   document.getElementById('weekPrev').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()-7); await renderWeek(); };
   document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
 }
