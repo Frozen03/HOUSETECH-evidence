@@ -895,7 +895,7 @@ async function renderPlan(){
 async function renderCalendar(){ await loadPlanMonth(); drawCalendar(); }
 function drawCalendar(){
   document.getElementById('monthLabel').textContent = monthLabel();
-  document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '';
+  document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? 'Vpis plana del v koledar';
   // mreža 6 tednov
   const first = new Date(calMonth); first.setDate(1); const firstWeekday = (first.getDay()+6)%7; // pon=0
   const start = new Date(first); start.setDate(first.getDate()-firstWeekday);
