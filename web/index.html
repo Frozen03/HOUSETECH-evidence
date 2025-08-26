@@ -905,7 +905,7 @@ function drawCalendar(){
     const inMonth = d.getMonth()===calMonth.getMonth();
     const items = planMonth.days[key]||[];
     const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
-    const list = items.map((it,idx)=>{
+   const list = items.map((it,idx)=>{
   const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name||e);
   const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
   return `<div class="cal-item">
@@ -918,11 +918,7 @@ function drawCalendar(){
         <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
       </div>` : ``}
   </div>`;
-    }).join('');
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
-    const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
-    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
-  }).join('');
+}).join('');
 }
 // urejanje
 /* === helpers za modal === */
