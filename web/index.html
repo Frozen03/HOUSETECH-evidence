@@ -929,30 +929,30 @@ function drawCalendar(){
     const items = planMonth.days[key] || [];
     const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
 
-    const list = items.map((it,idx)=>{
-      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name || e);
-      const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
-      return `<div class="cal-item">
-      const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
-      return `<div class="cal-item ${colorCls}">
-        <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-        <div class="text-[11px]" style="color:var(--muted)">
-          ${it.time ? it.time+' • ' : ''}${peopleNames.join(', ') || '—'}
-        </div>
-        ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-        <div class="text-[11px]" style="color:var(--muted)">${it.time? it.time+' • ' : ''}${peopleNames.join(', ')||'—'}</div>
-        ${it.note?`<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>`:''}
-        ${isOwnerCeoVodja() ? `
-          <div class="flex justify-end gap-1 mt-1">
-            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]"
-                    onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
-            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]"
-                    onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
-            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
-            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
-          </div>` : ``}
-      </div>`;
-    }).join('');
+    const list = items.map((it, idx) => {
+  const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+  const projName = projects.find(p => p.id === it.projectId)?.name || '—';
+
+  // barva glede na status
+  const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+
+  return `
+    <div class="cal-item ${colorCls}">
+      <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
+      <div class="text-[11px]" style="color:var(--muted)">
+        ${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}
+      </div>
+      ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+      ${isOwnerCeoVodja() ? `
+        <div class="flex justify-end gap-1 mt-1">
+          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]"
+                  onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]"
+                  onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+        </div>` : ``}
+    </div>`;
+}).join('');
+
     const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
