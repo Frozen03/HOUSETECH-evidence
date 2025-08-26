@@ -944,7 +944,11 @@ async function renderPlan(){
   if(isOwnerCeoVodja()){ await renderCalendar(); }
   if(isEmployeeOrStudent()){ await renderWeek(); }
 }
-async function renderCalendar(){ await loadPlanMonth(); drawCalendar(); }
+async function renderCalendar(){
+  await loadPlanMonth();
+  bindCategoryChips();     
+  drawCalendar();
+}
 function isItemDone(it){
   if (it.status === 'Opravljeno') return true;
   const people = Array.isArray(it.people) ? it.people : [];
@@ -969,28 +973,70 @@ function drawCalendar(){
     const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
 
     const list = items.map((it, idx) => {
-  const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
-  const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
-  const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
+      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+      const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
+      const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
-  return `
-    <div class="cal-item ${colorCls}">
-      <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-      <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-      ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-      ${isOwnerCeoVodja() ? `
-        <div class="flex justify-end gap-1 mt-1">
-          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-          <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-        </div>` : ''}
-    </div>`;
-}).join('');
+      return `
+        <div class="cal-item ${colorCls}">
+          <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
+          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+          ${isOwnerCeoVodja() ? `
+            <div class="flex justify-end gap-1 mt-1">
+              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
 
     const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
+
+countMonthStats();
 }
+
+/* -------- KPI & Filter -------- */
+let activeCategory = 'Vse';
+
+function countMonthStats() {
+  // šteje samo dni v prikazanem mesecu
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+
+  let all = 0, high = 0, done = 0;
+
+  Object.entries(planMonth.days || {}).forEach(([date, items]) => {
+    const d = new Date(date);
+    if (d.getFullYear() !== year || d.getMonth() !== month) return;
+
+    (items || []).forEach(it => {
+      if (activeCategory !== 'Vse' && it.category !== activeCategory) return;
+      all++;
+      // "visoka" – če uporabljaš prioriteto, jo tu preveri; drugače lahko High = category=="Elektro" ali kar želiš
+      if ((it.priority || '').toLowerCase() === 'visoka') high++;
+      if (isItemDone(it)) done++;
+    });
+  });
+
+  document.getElementById('kpiAll').textContent  = all;
+  document.getElementById('kpiHigh').textContent = high;
+  document.getElementById('kpiDone').textContent = done;
+}
+
+function bindCategoryChips(){
+  document.querySelectorAll('.plan-filters .chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      document.querySelectorAll('.plan-filters .chip').forEach(c=>c.classList.remove('active'));
+      ch.classList.add('active');
+      activeCategory = ch.getAttribute('data-cat') || 'Vse';
+      drawCalendar();
+    });
+  });
+}
+
 
 
 // urejanje
