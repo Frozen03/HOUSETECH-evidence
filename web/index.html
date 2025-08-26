@@ -251,6 +251,8 @@ select, input, textarea{ min-height:44px; }
       <div class="kpi-pill"><i class="fas fa-check mr-1"></i><span>Opravljenih</span> <b id="kpiDone">0</b></div>
     </div>
   </div>
+<div id="planPermNote" class="text-sm" style="color:var(--muted)"></div>
+
 
   <!-- FILTER ČIPI -->
   <div class="plan-filters">
@@ -263,12 +265,15 @@ select, input, textarea{ min-height:44px; }
   </div>
 
       <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
-        <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
-      </div>
-      <div id="calGrid" class="cal-grid"></div>
-      <div class="flex justify-end gap-2 mt-3">
-        <button id="planSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani plan</button>
-      </div>
+  <div>Pon</div><div>Tor</div><div>Sre</div><div>Čet</div><div>Pet</div><div>Sob</div><div>Ned</div>
+</div>
+
+<div id="calGrid" class="cal-grid"></div>
+
+<div class="flex justify-end gap-2 mt-3">
+  <button id="planSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani plan</button>
+</div>
+
     </div>
 
     <!-- Tedenski pogled za Zaposlen/Študent -->
