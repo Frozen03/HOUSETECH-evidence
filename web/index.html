@@ -68,10 +68,35 @@
     .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
     .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
     .cal-locked{ opacity:.6; pointer-events:none; }
+/* barve za postavke v koledarju */
+.cal-item{ transition: background .2s, border-color .2s, color .2s; }
+.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
+.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
+.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; } /* rumena */
+.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
+
     /* tedenski plan */
     .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
     .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
     .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
+
+/* lepši sticky tabs na mobitelu */
+#tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
+.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
+.tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:.5rem; padding:.25rem; }
+.tab-btn{ border-radius:.75rem; }
+
+/* večji “tap targets” */
+.btn{ min-height:44px; }
+select, input, textarea{ min-height:44px; }
+
+/* kartice malo več “air” na telefonu */
+@media (max-width:640px){
+  .card{ padding:1rem; border-radius:1rem; }
+  header .text-2xl{ font-size:1.35rem; }
+  #authCard .g_id_signin, #authCard #g_id_onload{ transform:scale(0.95); transform-origin:left; }
+}
+
 
 /* ===== Mobile tweaks for Plan dela ===== */
 @media (max-width: 1024px){
@@ -230,7 +255,9 @@
         <i class="fas fa-times"></i>
       </button>
 
-      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga</h3>
+      <h3 class="text-lg font-semibold mb-3">
+        <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
+      </h3>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
@@ -253,26 +280,12 @@
         </div>
 
         <div>
-          <label class="block text-sm mb-1">Lokacija / Stranka</label>
-          <input id="pmLocation" placeholder="npr. Vila Novak">
-        </div>
-
-        <div>
           <label class="block text-sm mb-1">Kategorija</label>
           <select id="pmCategory">
             <option>General</option>
             <option>Elektro</option>
             <option>Programiranje</option>
             <option>Servis</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-sm mb-1">Prioriteta</label>
-          <select id="pmPriority">
-            <option>Nizka</option>
-            <option>Srednja</option>
-            <option>Visoka</option>
           </select>
         </div>
 
@@ -297,7 +310,7 @@
 
       <div class="flex justify-end gap-2 mt-4">
         <button id="pmCancel" class="btn btn-outline"><i class="fas fa-ban"></i> Prekliči</button>
-        <button id="pmSave"   class="btn btn-primary"><i class="fas fa-save"></i> Shrani</button>
+        <button id="pmSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani</button>
       </div>
     </div>
   </div>
@@ -893,57 +906,51 @@ async function renderPlan(){
   if(isEmployeeOrStudent()){ await renderWeek(); }
 }
 async function renderCalendar(){ await loadPlanMonth(); drawCalendar(); }
+function isItemDone(it){
+  if (it.status === 'Opravljeno') return true;
+  const people = Array.isArray(it.people) ? it.people : [];
+  if (!people.length) return false;
+  const st = it.statuses || {};
+  return people.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
+}
+
 function drawCalendar(){
   document.getElementById('monthLabel').textContent = monthLabel();
-  document.getElementById('planPermNote').textContent =
-    isOwnerCeoVodja() ? '' : '';
+  document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '' : '';
 
-  // 6-tedenska mreža
   const first = new Date(calMonth); first.setDate(1);
-  const firstWeekday = (first.getDay()+6)%7; // pon = 0
+  const firstWeekday = (first.getDay()+6)%7; // pon=0
   const start = new Date(first); start.setDate(first.getDate()-firstWeekday);
 
-  const cells = [];
-  for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
-
+  const cells=[]; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
   calGrid.innerHTML = cells.map(d=>{
     const key = ymd(d);
     const inMonth = d.getMonth() === calMonth.getMonth();
     const items = planMonth.days[key] || [];
-
-    const hdr = `<div class="cal-day">
-      <span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>
-      ${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}
-    </div>`;
+    const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
 
     const list = items.map((it,idx)=>{
-      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name || e);
+      const peopleNames = (it.people||[]).map(e=>usersDir[e]?.name||e);
       const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
-      return `<div class="cal-item">
+      const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+      return `<div class="cal-item ${colorCls}">
         <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-        <div class="text-[11px]" style="color:var(--muted)">
-          ${it.time ? it.time+' • ' : ''}${peopleNames.join(', ') || '—'}
-        </div>
-        ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+        <div class="text-[11px]" style="color:var(--muted)">${it.time? it.time+' • ' : ''}${peopleNames.join(', ')||'—'}</div>
+        ${it.note?`<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>`:''}
         ${isOwnerCeoVodja() ? `
           <div class="flex justify-end gap-1 mt-1">
-            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]"
-                    onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
-            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]"
-                    onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}',${idx})"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}',${idx})"><i class="fas fa-trash"></i></button>
           </div>` : ``}
       </div>`;
     }).join('');
 
-    const addBtn = (isOwnerCeoVodja() && inMonth)
-      ? `<button class="btn btn-outline !py-1 !px-2 mt-2"
-                 onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>`
-      : '';
-
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
-    return `<div class="cal-cell ${lockCls}">${hdr}${list}${addBtn}</div>`;
+    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
 }
+
 
 // urejanje
 /* === helpers za modal === */
@@ -972,7 +979,8 @@ function openPlanModal(dayKey, idx=null){
   pm_fillProjects();
   const d = new Date(dayKey); document.getElementById('pmDate').value = d.toISOString().slice(0,10);
 
-  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', location:'', category:'General', priority:'Nizka', status:'V teku' };
+  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'General', status:'V teku' };
+
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
@@ -1001,15 +1009,13 @@ function pm_collect(){
   const projectId = document.getElementById('pmProject').value;
   const time      = document.getElementById('pmTime').value.trim();
   const title     = document.getElementById('pmTitle').value.trim();
-  const location  = document.getElementById('pmLocation').value.trim();
   const category  = document.getElementById('pmCategory').value;
-  const priority  = document.getElementById('pmPriority').value;
   const status    = document.getElementById('pmStatus').value;
   const note      = document.getElementById('pmNotes').value.trim();
 
   const people = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
 
-  const obj = { projectId, people, time, title, location, category, priority, status, note };
+  const obj = { projectId, people, time, title, category, status, note };
 
   // če je status pri kreiranju 'Opravljeno', inicializiraj statuses za vse izbrane
   if(status==='Opravljeno'){
