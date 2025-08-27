@@ -12,169 +12,127 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- EXCEL & PDF -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    :root{
-      --primary:#3B82F6; --primary-700:#2563EB; --secondary:#10B981; --danger:#EF4444;
+    :root {
+      --primary: #2563EB;     /* Modra */
+      --secondary: #10B981;   /* Zelena */
+      --accent: #8B5CF6;      /* Vijolična */
+      --warning: #F59E0B;     /* Oranžna */
+      --danger: #EF4444;      /* Rdeča */
+
       --bg:#F3F4F6; --card:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
       --tab-active:#FFFFFF; --tab-inactive:#F3F4F6;
     }
-    .dark-mode{
+    .dark-mode {
       --bg:#0F172A; --card:#111827; --text:#E5E7EB; --muted:#A1A1AA; --border:#1F2937;
       --tab-active:#111827; --tab-inactive:#1F2937;
     }
 
-    body{
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
       transition: background .3s, color .3s;
-      background:
-        url("../img/logo.png") center/contain no-repeat fixed,
-        var(--bg);
-    }
-    body.dark-mode{
-      background:
-        linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.95)),
-        url("../img/housetech-dark.png") center/cover no-repeat fixed;
     }
 
-    .card{ background: var(--card); border:1px solid var(--border); border-radius:1rem; box-shadow: 0 4px 8px rgba(0,0,0,.05); padding:1.25rem; }
-    .btn{ border-radius:.75rem; padding:.6rem 1.1rem; font-weight:600; display:inline-flex; gap:.5rem; align-items:center; }
-    .btn-primary{ background:var(--primary); color:#fff; } .btn-primary:hover{ background:var(--primary-700); }
-    .btn-outline{ border:1px solid var(--border); color:var(--text); background:transparent; }
-    .btn-danger{ background:var(--danger); color:#fff; }
+    /* Kartice s sencami */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+    }
+    .card:hover {
+      box-shadow: 0 14px 28px rgba(0,0,0,0.12), 0 10px 10px rgba(0,0,0,0.10);
+    }
 
-.logo {
-    font-weight: 800;
-    background: linear-gradient(90deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
+    /* Logo gradient */
+    .logo {
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
 
-    input, select, textarea{ width:100%; border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:.75rem; padding:.7rem .9rem; }
-    input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+    /* Tab aktivni */
+    .tab-active {
+      border-bottom: 3px solid var(--primary);
+      background: var(--tab-active);
+      color: var(--primary);
+      font-weight: 700;
+    }
 
-    .tab-btn{ padding:.5rem 1rem; font-weight:600; border:1px solid var(--border); }
-    .tab-active{ background:var(--tab-active); }
-    .tab-inactive{ background:var(--tab-inactive); color:var(--muted); }
-    .tab-btn + .tab-btn{ border-left:none; }
-    .tabs-wrap{ border-radius:1rem; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    /* Koledar celice */
+    .cal-cell {
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 140px;
+      transition: all 0.2s ease;
+    }
+    .cal-cell:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
 
-    .tbl { width:100%; border-collapse: collapse; }
-    .tbl th,.tbl td { border:1px solid var(--border); padding:.5rem .6rem; font-size:.875rem; }
-    .tbl th { background:var(--tab-inactive); text-align:left; }
+    /* Barvno kodiranje kategorij */
+    .cal-item.cal-general { background: #EFF6FF; border-color: #93C5FD; }
+    .cal-item.cal-elektro { background: #F0FDF4; border-color: #86EFAC; }
+    .cal-item.cal-programiranje { background: #F5F3FF; border-color: #C4B5FD; }
+    .cal-item.cal-servis { background: #FEF3C7; border-color: #FCD34D; }
 
-    /* koledar (mesečni plan) */
-    .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
-    .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
-    .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
-    .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
-    .cal-locked{ opacity:.6; pointer-events:none; }
+    /* Ripple efekt */
+    .btn {
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 5px; height: 5px;
+      background: rgba(255,255,255,0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1,1) translate(-50%);
+    }
+    .btn:focus:not(:active)::after {
+      animation: ripple 1s ease-out;
+    }
+    @keyframes ripple {
+      0% { transform: scale(0,0); opacity:1; }
+      20% { transform: scale(25,25); opacity:1; }
+      100% { transform: scale(50,50); opacity:0; }
+    }
 
-/* header koledarja */
-.plan-header{ display:flex; gap:.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-.plan-nav{ display:flex; gap:.5rem; align-items:center; }
-.plan-nav .btn{ padding:.4rem .7rem; }
-#monthLabel{ font-weight:600; font-size:1.05rem; min-width:auto; }
-
-.plan-kpis{ display:flex; gap:.5rem; align-items:center; }
-.kpi-pill{ border:1px solid var(--border); background:var(--tab-active); border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem; }
-.kpi-pill span{ font-weight:600; color:var(--muted); margin-left:.35rem; }
-
-.plan-filters{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0 .5rem; }
-.chip{ border:1px solid var(--border); background:var(--tab-inactive); border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
-.chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
-
-
-/* barve za postavke v koledarju */
-.cal-item{ transition: background .2s, border-color .2s, color .2s; }
-.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
-.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
-.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; } /* rumena */
-.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
-
-    /* tedenski plan */
-    .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
-    .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
-    .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
-
-/* lepši sticky tabs na mobitelu */
-#tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
-.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
-.tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:.5rem; padding:.25rem; }
-.tab-btn{ border-radius:.75rem; }
-
-/* večji “tap targets” */
-.btn{ min-height:44px; }
-select, input, textarea{ min-height:44px; }
-
-/* kartice malo več “air” na telefonu */
-@media (max-width:640px){
-  .card{ padding:1rem; border-radius:1rem; }
-  header .text-2xl{ font-size:1.35rem; }
-  #authCard .g_id_signin, #authCard #g_id_onload{ transform:scale(0.95); transform-origin:left; }
-}
-
-
-/* ===== Mobile tweaks for Plan dela ===== */
-@media (max-width: 1024px){
-  .tabs-wrap{ display:flex; overflow:auto; }
-  .tab-btn{ white-space:nowrap; font-size:.9rem; }
-  /* mesečni koledar: 4 stolpci na tablici */
-  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
-}
-
-@media (max-width: 768px){
-  h1{ font-size:1.25rem; }
-  .card{ padding:1rem; }
-  /* mesečni koledar: 3 stolpci na “velikem” telefonu */
-  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-  /* tedenski pogled: dva stolpca */
-  .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-
-@media (max-width: 640px){
-  .tabs-wrap{ gap:.25rem; }
-  .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
-
-  /* mesečni koledar: 2 stolpca na telefonu */
-  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .cal-cell{ min-height:150px; }
-
-  /* tedenski pogled: 1 stolpec – po dnevu pod seboj */
-  .week-grid{ grid-template-columns: 1fr; }
-  /* status select ne prekriva drugih elementov */
-  .week-grid .p-2 .mt-2{ flex-wrap:wrap; }
-  .week-grid .p-2 select{ width:100%; }
-  .week-grid .p-2 .font-medium{ font-size:.95rem; }
-  .week-grid .p-2 .text-xs{ font-size:.8rem; }
-  #weekLabel{ min-width:0; font-size:.95rem; }
-}
-
-/* na mobitelu naj vse lepo prelomi */
-@media (max-width:640px){
-  .plan-header{ align-items:flex-start; }
-  .plan-kpis{ width:100%; justify-content:flex-start; }
-}
-    
+    /* Odzivnost */
+    @media (max-width: 640px) {
+      .cal-grid { grid-template-columns: repeat(1, minmax(0,1fr)); gap: 0.75rem; }
+      .cal-cell { min-height: 120px; padding: 0.75rem; }
+      .plan-header { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .plan-nav, .plan-kpis { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
 <div class="max-w-6xl mx-auto py-6 px-4">
   <header class="flex items-start justify-between mb-6">
-    <div>
-      <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-bold flex items-center gap-3"><span class="logo">HOUSETECH</span><span>Ops</span></h1>
-        <button id="themeToggle" class="btn btn-outline p-2 !px-3" title="Preklopi temo"><i class="fas fa-moon"></i></button>
-      </div>
-      <p class="text-sm" style="color:var(--muted)">Prijava z Google</p>
+    <div class="flex items-center gap-3">
+      <!-- Logo z ikono -->
+      <h1 class="text-2xl font-bold flex items-center gap-3">
+        <img src="img/logo-icon.svg" alt="HOUSETECH" class="h-8 w-8">
+        <span class="logo">HOUSETECH</span>
+        <span>Ops</span>
+      </h1>
+      <button id="themeToggle" class="btn btn-outline p-2 !px-3"><i class="fas fa-moon"></i></button>
     </div>
-    <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
   </header>
 
   <!-- PRIJAVA -->
@@ -248,13 +206,13 @@ select, input, textarea{ min-height:44px; }
     <div class="plan-nav">
       <button id="monthPrev" class="btn btn-outline !py-1"><i class="fas fa-chevron-left"></i></button>
       <div id="monthLabel"></div>
-      <div id="weekWindow" class="text-sm" style="color:var(--muted)"></div>
       <button id="monthNext" class="btn btn-outline !py-1"><i class="fas fa-chevron-right"></i></button>
       <button id="monthToday" class="btn btn-outline !py-1">Danes</button>
     </div>
 
     <div class="plan-kpis">
       <div class="kpi-pill"><i class="far fa-calendar-check mr-1"></i><span>Skupno</span> <b id="kpiAll">0</b></div>
+      <div class="kpi-pill"><i class="fas fa-circle-exclamation mr-1"></i><span>Visokih</span> <b id="kpiHigh">0</b></div>
       <div class="kpi-pill"><i class="fas fa-check mr-1"></i><span>Opravljenih</span> <b id="kpiDone">0</b></div>
     </div>
   </div>
@@ -266,9 +224,9 @@ select, input, textarea{ min-height:44px; }
     <div class="text-xs" style="color:var(--muted)">Kategorije:</div>
     <button class="chip active" data-cat="Vse">Vse</button>
     <button class="chip" data-cat="General">Splošno</button>
-    <button class="chip" data-cat="Elektro">Groba montaža</button>
-    <button class="chip" data-cat="Programiranje">Fina montaža</button>
-    <button class="chip" data-cat="Servis">Programiranje</button>
+    <button class="chip" data-cat="Elektro">Elektro</button>
+    <button class="chip" data-cat="Programiranje">KNX</button>
+    <button class="chip" data-cat="Servis">Shelly</button>
   </div>
 
       <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
@@ -937,6 +895,302 @@ function prepareReportFilters(){
 }
 function renderReports(){ /* sem lahko dodaš obstoječo logiko poročil */ }
 
+/* ===================== PLAN: /workplan/month ===================== */
+let calMonth = new Date(); calMonth.setDate(1);
+let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note, statuses?:{[email]: 'V teku'|'Opravljeno'}} ]
+
+const calGrid = document.getElementById('calGrid');
+document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
+document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await loadPlanMonth(); drawCalendar(); });
+document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth = new Date(); calMonth.setDate(1); await loadPlanMonth(); drawCalendar(); });
+document.getElementById('planSave')?.addEventListener('click', async ()=>{ if(!isOwnerCeoVodja()) return alert('Samo Owner/CEO/vodja.'); await savePlanMonth(); });
+
+function ymd(d){ return d.toISOString().slice(0,10); }
+function monthStartKey(){ const d=new Date(calMonth); d.setDate(1); return ymd(d); }
+function monthLabel(){ return calMonth.toLocaleDateString('sl-SI',{month:'long',year:'numeric'}); }
+async function renderPlan(){
+  document.getElementById('plan-month-wrap').classList.toggle('hidden', !isOwnerCeoVodja());
+  document.getElementById('plan-week-wrap').classList.toggle('hidden', !isEmployeeOrStudent());
+  if(isOwnerCeoVodja()){ await renderCalendar(); }
+  if(isEmployeeOrStudent()){ await renderWeek(); }
+}
+async function renderCalendar(){
+  await loadPlanMonth();
+  bindCategoryChips();     
+  drawCalendar();
+}
+function isItemDone(it){
+  if (it.status === 'Opravljeno') return true;
+  const people = Array.isArray(it.people) ? it.people : [];
+  if (!people.length) return false;
+  const st = it.statuses || {};
+  return people.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
+}
+
+function drawCalendar(){
+  document.getElementById('monthLabel').textContent = monthLabel();
+  document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '' : '';
+
+  const first = new Date(calMonth); first.setDate(1);
+  const firstWeekday = (first.getDay()+6)%7; // pon=0
+  const start = new Date(first); start.setDate(first.getDate()-firstWeekday);
+
+  const cells=[]; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
+  calGrid.innerHTML = cells.map(d=>{
+    const key = ymd(d);
+    const inMonth = d.getMonth() === calMonth.getMonth();
+    const items = planMonth.days[key] || [];
+    const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
+
+    const list = items.map((it, idx) => {
+      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+      const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
+      const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
+
+      return `
+        <div class="cal-item ${colorCls}">
+          <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
+          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+          ${isOwnerCeoVodja() ? `
+            <div class="flex justify-end gap-1 mt-1">
+              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+    const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
+    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
+  }).join('');
+
+countMonthStats();
+}
+
+/* -------- KPI & Filter -------- */
+let activeCategory = 'Vse';
+
+function countMonthStats() {
+  // šteje samo dni v prikazanem mesecu
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+
+  let all = 0, high = 0, done = 0;
+
+  Object.entries(planMonth.days || {}).forEach(([date, items]) => {
+    const d = new Date(date);
+    if (d.getFullYear() !== year || d.getMonth() !== month) return;
+
+    (items || []).forEach(it => {
+      if (activeCategory !== 'Vse' && it.category !== activeCategory) return;
+      all++;
+      // "visoka" – če uporabljaš prioriteto, jo tu preveri; drugače lahko High = category=="Elektro" ali kar želiš
+      if ((it.priority || '').toLowerCase() === 'visoka') high++;
+      if (isItemDone(it)) done++;
+    });
+  });
+
+  document.getElementById('kpiAll').textContent  = all;
+  document.getElementById('kpiHigh').textContent = high;
+  document.getElementById('kpiDone').textContent = done;
+}
+
+function bindCategoryChips(){
+  document.querySelectorAll('.plan-filters .chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      document.querySelectorAll('.plan-filters .chip').forEach(c=>c.classList.remove('active'));
+      ch.classList.add('active');
+      activeCategory = ch.getAttribute('data-cat') || 'Vse';
+      drawCalendar();
+    });
+  });
+}
+
+
+
+// urejanje
+/* === helpers za modal === */
+let pm_ctx = { dayKey:null, index:null, isEdit:false };
+
+function pm_fillProjects(){
+  const sel = document.getElementById('pmProject');
+  sel.innerHTML = projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+
+function pm_fillPeople(selectedEmails=[]){
+  const box = document.getElementById('pmPeople');
+  const arr = Object.entries(usersDir)
+    .map(([email,u])=>({email, name:u?.name||email}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  box.innerHTML = arr.map(u=>`
+    <label class="flex items-center gap-2 border rounded-lg px-2 py-1">
+      <input type="checkbox" value="${u.email}" ${selectedEmails.includes(u.email)?'checked':''}>
+      <span class="truncate">${u.name} <span class="text-xs" style="color:var(--muted)">• ${u.email}</span></span>
+    </label>`).join('');
+}
+
+function openPlanModal(dayKey, idx=null){
+  pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
+
+  pm_fillProjects();
+  const d = new Date(dayKey); document.getElementById('pmDate').value = d.toISOString().slice(0,10);
+
+  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'General', status:'V teku' };
+
+  if(pm_ctx.isEdit){
+    const src = (planMonth.days[dayKey]||[])[idx] || {};
+    it = { ...it, ...src };
+  }
+
+  document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
+  document.getElementById('pmTime').value     = it.time || '';
+  document.getElementById('pmTitle').value    = it.title || '';
+  document.getElementById('pmCategory').value = it.category || 'General';
+  document.getElementById('pmStatus').value   = it.status || 'V teku';
+  document.getElementById('pmNotes').value    = it.note || '';
+
+  pm_fillPeople(Array.isArray(it.people)?it.people:[]);
+
+  document.getElementById('planModal').classList.remove('hidden');
+}
+
+function closePlanModal(){
+  document.getElementById('planModal').classList.add('hidden');
+}
+
+function pm_collect(){
+  const dayKey = pm_ctx.dayKey;
+  const projectId = document.getElementById('pmProject').value;
+  const time      = document.getElementById('pmTime').value.trim();
+  const title     = document.getElementById('pmTitle').value.trim();
+  const category  = document.getElementById('pmCategory').value;
+  const status    = document.getElementById('pmStatus').value;
+  const note      = document.getElementById('pmNotes').value.trim();
+
+  const people = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
+
+  const obj = { projectId, people, time, title, category, status, note };
+
+  // če je status pri kreiranju 'Opravljeno', inicializiraj statuses za vse izbrane
+  if(status==='Opravljeno'){
+    obj.statuses = {};
+    people.forEach(e=> obj.statuses[e]='Opravljeno');
+  }
+  return { dayKey, obj };
+}
+
+/* === public API za koledar === */
+async function addPlanItem(dayKey){ openPlanModal(dayKey, null); }
+function editPlanItem(dayKey, idx){ openPlanModal(dayKey, idx); }
+
+/* === init gumbi === */
+['pmClose','pmCancel'].forEach(id=>document.getElementById(id).addEventListener('click', closePlanModal));
+document.getElementById('pmSave').addEventListener('click', async ()=>{
+  const { dayKey, obj } = pm_collect();
+  (planMonth.days[dayKey] ||= []);
+  if(pm_ctx.isEdit){
+    planMonth.days[dayKey][pm_ctx.index] = { ...(planMonth.days[dayKey][pm_ctx.index]||{}), ...obj };
+  }else{
+    planMonth.days[dayKey].push({ ...obj, statuses:{} });
+  }
+  closePlanModal();
+  drawCalendar();
+  await savePlanMonth();
+});
+function removePlanItem(dayKey, idx){
+  if(!confirm('Odstrani postavko?')) return;
+  (planMonth.days[dayKey]||[]).splice(idx,1);
+  drawCalendar();
+}
+// API <-> lokalno
+function monthStoreKey(){ return 'workplan:month:'+monthStartKey().slice(0,7); } // YYYY-MM
+async function loadPlanMonth(){
+  try{
+    const q = new URLSearchParams({ start: monthStartKey() }).toString();
+    const r = await fetch(API_BASE+'/workplan/month?'+q,{headers:{Authorization:'Bearer '+accessToken}});
+    if(r.ok){ planMonth = await r.json(); if(!planMonth.days) planMonth={days:{}}; return; }
+  }catch(e){}
+  planMonth = JSON.parse(localStorage.getItem(monthStoreKey())||'{"days":{}}');
+}
+async function savePlanMonth(){
+  try{
+    const r = await fetch(API_BASE+'/workplan/month',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},body:JSON.stringify({ start: monthStartKey(), days: planMonth.days })});
+    if(r.ok){ alert('Plan shranjen.'); return; }
+  }catch(e){}
+  localStorage.setItem(monthStoreKey(), JSON.stringify(planMonth));
+  alert('Plan shranjen lokalno (BETA).');
+}
+
+/* ===== Tedenski pogled (employee/student) ===== */
+let weekRef = new Date();
+function weekRange(d){ // vrne pon..sob
+  const day=(d.getDay()+6)%7; const mon=new Date(d); mon.setDate(d.getDate()-day);
+  const days=[]; for(let i=0;i<6;i++){ const dd=new Date(mon); dd.setDate(mon.getDate()+i); days.push(dd); }
+  return days;
+}
+async function renderWeek(){
+  await loadPlanMonth(); // mesečni paket (dovolj za teden)
+  const days = weekRange(weekRef);
+  document.getElementById('weekLabel').textContent =
+    `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
+  const wg = document.getElementById('weekGrid');
+  wg.innerHTML = days.map(d => {
+  const key   = ymd(d);
+  const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
+
+  const list = items.map((it, idx) => {
+    const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+    const st   = (it.statuses || {})[me.email] || 'V teku';
+
+    const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
+    const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
+    const locked   = st === 'Opravljeno' ? 'disabled' : '';
+
+    return `
+      <div class="p-2 border rounded-lg mb-1">
+        <div class="font-medium">${it.title ? it.title : proj}</div>
+        ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
+        <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
+        <div class="mt-2 flex items-center gap-2">
+          <label class="text-xs">Status:</label>
+          <select class="text-xs border rounded px-2 py-1"
+                  onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
+            <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
+            <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
+          </select>
+          ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+        </div>
+      </div>`;
+  }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
+
+  return `
+    <div class="border rounded-lg p-2">
+      <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
+      ${list}
+    </div>`;
+}).join('');
+
+  document.getElementById('weekPrev').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()-7); await renderWeek(); };
+  document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
+}
+window.updatePersonalStatus = async (dayKey, idx, val)=>{
+  (planMonth.days[dayKey] ||= []);
+  const it = planMonth.days[dayKey][idx]; if(!it) return;
+  it.statuses ||= {};
+  const cur = it.statuses[me.email] || 'V teku';
+  if (cur === 'Opravljeno' && val !== 'Opravljeno') {
+    alert('Ta postavka je že označena kot Opravljeno in je zaklenjena.');
+    // osveži UI, da se select spet onemogoči (če je bil kako omogočen)
+    await renderWeek();
+    return;
+  }
+  it.statuses[me.email] = val;
+  await savePlanMonth();
+  // takoj osvežimo, da se select zaklene
+  await renderWeek();
+};
+
 /* ===== DNEVNIKI (manager) ===== */
 function setDefaultDates(idFrom, idTo){
   const from = document.getElementById(idFrom), to=document.getElementById(idTo);
@@ -962,8 +1216,7 @@ function groupMaterials(logs, mode){
     const key = mode==='day' ? date.toISOString().slice(0,10)
               : mode==='month' ? date.toISOString().slice(0,7)
               : 'Skupno';
-    if (!result[proj]) result[proj] = {};
-    if (!result[proj][key]) result[proj][key] = {};
+    (result[proj] ||= {}); (result[proj][key] ||= {});
     (l.materials||[]).forEach(m=>{
       if(!m?.name) return;
       const cur = result[proj][key][m.name] || { qty:0, uom: m.uom||'kos' };
@@ -1015,319 +1268,6 @@ async function renderJournals(){
       </div>
     </div>`).join('') || `<div class='text-sm italic' style="color:var(--muted)">Ni dnevnikov.</div>`;
 }
-
-/* ===================== PLAN: /workplan/month (FIX) ===================== */
-/* — Glavni state — */
-let calMonth = new Date(); calMonth.setDate(1);
-let planMonth = { days:{} }; // { 'YYYY-MM-DD': [ {projectId, people[], time,title,category,status, note, statuses{email:status}} ] }
-let activeFilter = 'all';     // 'all' | 'General' | 'Elektro' | 'Programiranje' | 'Servis'
-
-/* — Pomožne — */
-const calGrid       = document.getElementById('calGrid');
-const monthLabelEl  = document.getElementById('monthLabel');
-const weekWindowEl  = document.getElementById('weekWindow'); // lahko manjka v tvojem HTML — varno preverjamo
-const canEdit       = () => isOwnerCeoVodja();
-
-function ymd(d){ return d.toISOString().slice(0,10); }
-function monthStartKey(){ const d=new Date(calMonth); d.setDate(1); return ymd(d); }
-function monthLabel(){ return calMonth.toLocaleDateString('sl-SI',{month:'long',year:'numeric'}); }
-function startOfMonth(d){ const x=new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
-function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-function weekRangeOfMonth(d){
-  const s=startOfMonth(d), e=endOfMonth(d);
-  const firstMonday=new Date(s); const day=(s.getDay()+6)%7; firstMonday.setDate(s.getDate()-day);
-  const lastSunday=new Date(e); const day2=(e.getDay()+6)%7; lastSunday.setDate(e.getDate()+(6-day2));
-  return `${firstMonday.getDate()}. ${firstMonday.getMonth()+1}. – ${lastSunday.getDate()}. ${lastSunday.getMonth()+1}.`;
-}
-
-/* — API — */
-async function loadPlanMonth(){
-  try{
-    const q = new URLSearchParams({ start: monthStartKey() }).toString();
-    const r = await fetch(API_BASE + '/workplan/month?' + q, { headers:{ Authorization:'Bearer '+accessToken }});
-    if(r.ok){ planMonth = await r.json(); if(!planMonth.days) planMonth={days:{}}; return; }
-  }catch(e){}
-  planMonth = {days:{}};
-}
-async function savePlanMonth(){
-  try{
-    const body = { start: monthStartKey(), days: planMonth.days };
-    const r = await fetch(API_BASE + '/workplan/month', {
-      method:'PUT',
-      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
-      body: JSON.stringify(body)
-    });
-    if(!r.ok){ const e=await r.json().catch(()=>({})); alert(e.error||'Napaka pri shranjevanju'); }
-  }catch(e){ alert('Napaka pri shranjevanju'); }
-}
-
-/* — Filter čipi (popravek: .chip + data-cat) — */
-document.querySelectorAll('.chip').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const cat = btn.dataset.cat || 'Vse';
-    activeFilter = (cat==='Vse') ? 'all' : cat; // tvoje oznake: General/Elektro/Programiranje/Servis
-    drawCalendar();
-  });
-});
-
-/* — Navigacija mesecev — */
-document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await renderCalendar(); });
-document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await renderCalendar(); });
-document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth=new Date(); calMonth.setDate(1); await renderCalendar(); });
-document.getElementById('planSave')?.addEventListener('click', async ()=>{
-  if(!canEdit()) return alert('Samo Owner/CEO/vodja');
-  await savePlanMonth(); alert('Plan shranjen.');
-});
-
-/* — Vstopna točka za zavihek Plan — */
-async function renderPlan(){
-  const mgr = isOwnerCeoVodja(); const emp = isEmployeeOrStudent();
-  document.getElementById('plan-month-wrap')?.classList.toggle('hidden', !mgr);
-  document.getElementById('plan-week-wrap')?.classList.toggle('hidden', !emp);
-  if(mgr) await renderCalendar();
-  if(emp) await renderWeek();
-}
-
-/* — Barve/zapolnjenost statusa — */
-function isItemDone(it){
-  if (it.status === 'Opravljeno') return true;
-  const ppl = Array.isArray(it.people) ? it.people : [];
-  if (!ppl.length) return false;
-  const st = it.statuses || {};
-  return ppl.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
-}
-
-/* — Izris mesečnega koledarja — */
-async function renderCalendar(){
-  await loadPlanMonth();
-  drawCalendar();
-}
-
-function drawCalendar(){
-  if(monthLabelEl) monthLabelEl.textContent = monthLabel();
-  if(weekWindowEl) weekWindowEl.textContent = weekRangeOfMonth(calMonth);
-
-  const first = new Date(calMonth); first.setDate(1);
-  const lead = (first.getDay()+6)%7; // Monday=0
-  const start = new Date(first); start.setDate(first.getDate()-lead);
-  const cells = Array.from({length:42},(_,i)=>{ const d=new Date(start); d.setDate(start.getDate()+i); return d; });
-
-  const todayIso = ymd(new Date());
-  calGrid.innerHTML = cells.map(d=>{
-    const key = ymd(d);
-    const inMonth = d.getMonth()===calMonth.getMonth();
-    const all = planMonth.days[key] || [];
-    const filtered = all.filter(it => activeFilter==='all' || (it.category||'General')===activeFilter);
-
-    const hdr = `
-      <div class="flex items-center justify-between mb-2">
-        <div class="font-semibold">${d.getDate()}.</div>
-        <div class="text-xs" style="color:var(--muted)">${d.toLocaleDateString('sl-SI',{weekday:'short'})}</div>
-      </div>`;
-
-    const items = filtered.map((it, idx)=>{
-      const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
-      const peopleNames = (it.people||[]).map(e => usersDir[e]?.name || e);
-      const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
-      return `
-        <div class="cal-item ${colorCls}">
-          <div class="font-semibold truncate">${it.title || projName}</div>
-          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time+' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${escapeHtml(it.note)}</div>` : ''}
-          ${canEdit() && inMonth ? `
-            <div class="flex justify-end gap-1 mt-1">
-              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-            </div>` : ''}
-        </div>`;
-    }).join('');
-
-    const addBtn = canEdit() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
-
-    return `
-      <div class="cal-cell ${key===todayIso?'outline outline-2 outline-[var(--primary)]':''}">
-        ${hdr}
-        <div>${items || `<div class="text-xs italic" style="color:var(--muted)">Ni nalog</div>`}</div>
-        ${addBtn}
-      </div>`;
-  }).join('');
-
-  // KPI (tvoj HTML: kpiAll/kpiHigh/kpiDone)
-  const month = calMonth.getMonth(), year=calMonth.getFullYear();
-  let total=0, done=0, high=0; // high = 0 (v tvojem formatu ni prioritete; ohranjamo števec za prihodnost)
-  Object.entries(planMonth.days).forEach(([date, arr])=>{
-    const d = new Date(date); if(d.getMonth()!==month || d.getFullYear()!==year) return;
-    (arr||[]).forEach(it=>{
-      if(activeFilter!=='all' && (it.category||'General')!==activeFilter) return;
-      total++; if(isItemDone(it)) done++;
-      // če dodaš prioriteto npr. it.priority==='Visoka' → high++
-    });
-  });
-  document.getElementById('kpiAll')?.textContent  = total;
-  document.getElementById('kpiDone')?.textContent = done;
-  document.getElementById('kpiHigh')?.textContent = high;
-}
-
-/* — Modal (poravnano na pm* ID-je v tvojem HTML) — */
-let pm_ctx = { dayKey:null, index:null, isEdit:false };
-
-function openPlanModal(dayKey, idx=null){
-  pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
-
-  // privzeta postavka
-  let it = { projectId: projects[0]?.id||null, people: [], time:'', title:'', category:'General', status:'V teku', note:'' };
-
-  if(pm_ctx.isEdit){
-    const src = (planMonth.days[dayKey]||[])[idx] || {};
-    it = { ...it, ...src };
-  }
-
-  // napolni polja modala
-  document.getElementById('pmDate').value     = (new Date(dayKey)).toISOString().slice(0,10);
-  document.getElementById('pmTime').value     = it.time || '';
-  document.getElementById('pmTitle').value    = it.title || '';
-  document.getElementById('pmCategory').value = it.category || 'General';
-  document.getElementById('pmStatus').value   = it.status || 'V teku';
-  document.getElementById('pmNotes').value    = it.note || '';
-
-  // projekt (če želiš imeti realni izbor projekta, tu ga lahko dodaš; trenutno ga držimo implicitno)
-  const projSel = document.getElementById('pmProject');
-  if(projSel){
-    projSel.innerHTML = projects.map(p=>`<option value="${p.id}" ${p.id===it.projectId?'selected':''}>${p.name}</option>`).join('');
-  }
-
-  // ekipa
-  const box = document.getElementById('pmPeople');
-  const arr = Object.entries(usersDir)
-    .map(([email,u])=>({email, name:u?.name||email}))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  box.innerHTML = arr.map(u=>`
-    <label class="flex items-center gap-2 border rounded-lg px-2 py-1">
-      <input type="checkbox" value="${u.email}" ${(it.people||[]).includes(u.email)?'checked':''}>
-      <span class="truncate">${u.name} <span class="text-xs" style="color:var(--muted)">• ${u.email}</span></span>
-    </label>`).join('');
-
-  // UI
-  document.getElementById('pmSave')?.classList.remove('hidden');
-  document.getElementById('pmCancel')?.classList.remove('hidden');
-  showModal();
-}
-
-function showModal(){ const m=document.getElementById('planModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
-function hideModal(){ const m=document.getElementById('planModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
-
-function collectModal(){
-  const dayKey   = ymd(new Date(document.getElementById('pmDate').value));
-  const time     = document.getElementById('pmTime').value.trim();
-  const title    = document.getElementById('pmTitle').value.trim();
-  const category = document.getElementById('pmCategory').value;
-  const status   = document.getElementById('pmStatus').value;
-  const note     = document.getElementById('pmNotes').value.trim();
-  const people   = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
-  const projectId = (document.getElementById('pmProject')?.value) || (projects[0]?.id) || null;
-
-  const obj = { projectId, people, time, title, category, status, note };
-  if(status==='Opravljeno'){
-    obj.statuses = {}; people.forEach(e=> obj.statuses[e]='Opravljeno');
-  }
-  return { dayKey, obj };
-}
-
-/* — Javni handlerji — */
-async function addPlanItem(dayKey){ if(!canEdit()) return; openPlanModal(dayKey, null); }
-function editPlanItem(dayKey, idx){ if(!canEdit()) return; openPlanModal(dayKey, idx); }
-function removePlanItem(dayKey, idx){
-  if(!canEdit()) return;
-  if(!confirm('Odstrani postavko?')) return;
-  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
-  drawCalendar(); savePlanMonth();
-}
-window.addPlanItem = addPlanItem;
-window.editPlanItem = editPlanItem;
-window.removePlanItem = removePlanItem;
-
-/* — Gumbi v modalu (poravnano na pm* gumbe) — */
-document.getElementById('pmClose')?.addEventListener('click', hideModal);
-document.getElementById('pmCancel')?.addEventListener('click', hideModal);
-document.getElementById('pmSave')?.addEventListener('click', async ()=>{
-  const { dayKey, obj } = collectModal();
-  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
-  if(pm_ctx.isEdit){
-    planMonth.days[dayKey][pm_ctx.index] = { ...(planMonth.days[dayKey][pm_ctx.index]||{}), ...obj };
-  }else{
-    planMonth.days[dayKey].push({ ...obj, statuses:{} });
-  }
-  hideModal();
-  drawCalendar();
-  await savePlanMonth();
-});
-
-/* — Tedenski pogled (za zaposlene/študente) — */
-let weekRef = new Date();
-function weekRange(d){
-  const day=(d.getDay()+6)%7; const mon=new Date(d); mon.setDate(d.getDate()-day);
-  const days=[]; for(let i=0;i<6;i++){ const dd=new Date(mon); dd.setDate(mon.getDate()+i); days.push(dd); }
-  return days;
-}
-async function renderWeek(){
-  await loadPlanMonth();
-  const days = weekRange(weekRef);
-  document.getElementById('weekLabel').textContent =
-    `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
-  const wg = document.getElementById('weekGrid');
-  wg.innerHTML = days.map(d => {
-    const key = ymd(d);
-    const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
-
-    const list = items.map((it, idx) => {
-      const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-      const st   = (it.statuses || {})[me.email] || 'V teku';
-      const team = (it.people||[]).filter(e=>e!==me.email).map(e=>usersDir[e]?.name || e);
-      const locked = st==='Opravljeno' ? 'disabled' : '';
-      return `
-        <div class="p-2 border rounded-lg mb-1">
-          <div class="font-medium">${it.title || proj}</div>
-          ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${escapeHtml(it.note)}</div>` : ''}
-          <div class="text-xs mt-1" style="color:var(--muted)">${team.length?`Ekipa: ${team.join(', ')}`:'Ekipa: — (samo ti)'}</div>
-          <div class="mt-2 flex items-center gap-2">
-            <label class="text-xs">Status:</label>
-            <select class="text-xs border rounded px-2 py-1"
-                    onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
-              <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
-              <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
-            </select>
-            ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-          </div>
-        </div>`;
-    }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
-
-    return `
-      <div class="border rounded-lg p-2">
-        <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
-        ${list}
-      </div>`;
-  }).join('');
-
-  document.getElementById('weekPrev').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()-7); await renderWeek(); };
-  document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
-}
-window.updatePersonalStatus = async (dayKey, idx, val)=>{
-  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
-  const it = planMonth.days[dayKey][idx]; if(!it) return;
-  if (!it.statuses) it.statuses = {};
-  const current = it.statuses[me.email] || 'V teku';
-  if (current === 'Opravljeno' && val !== 'Opravljeno') {
-    await renderWeek(); return; // zaklenjeno
-  }
-  it.statuses[me.email] = val;
-  await savePlanMonth();
-  await renderWeek();
-};
-
-/* — Pomagalček — */
-function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;","—":"—",">":"&gt;","\"":"&quot;"}[m])); }
 
 /* ===== Sign out clears ===== */
 </script>
