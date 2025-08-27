@@ -248,13 +248,13 @@ select, input, textarea{ min-height:44px; }
     <div class="plan-nav">
       <button id="monthPrev" class="btn btn-outline !py-1"><i class="fas fa-chevron-left"></i></button>
       <div id="monthLabel"></div>
+      <div id="weekWindow" class="text-sm" style="color:var(--muted)"></div>
       <button id="monthNext" class="btn btn-outline !py-1"><i class="fas fa-chevron-right"></i></button>
       <button id="monthToday" class="btn btn-outline !py-1">Danes</button>
     </div>
 
     <div class="plan-kpis">
       <div class="kpi-pill"><i class="far fa-calendar-check mr-1"></i><span>Skupno</span> <b id="kpiAll">0</b></div>
-      <div class="kpi-pill"><i class="fas fa-circle-exclamation mr-1"></i><span>Visokih</span> <b id="kpiHigh">0</b></div>
       <div class="kpi-pill"><i class="fas fa-check mr-1"></i><span>Opravljenih</span> <b id="kpiDone">0</b></div>
     </div>
   </div>
@@ -266,9 +266,9 @@ select, input, textarea{ min-height:44px; }
     <div class="text-xs" style="color:var(--muted)">Kategorije:</div>
     <button class="chip active" data-cat="Vse">Vse</button>
     <button class="chip" data-cat="General">Splošno</button>
-    <button class="chip" data-cat="Elektro">Elektro</button>
-    <button class="chip" data-cat="Programiranje">KNX</button>
-    <button class="chip" data-cat="Servis">Shelly</button>
+    <button class="chip" data-cat="Elektro">Groba montaža</button>
+    <button class="chip" data-cat="Programiranje">Fina montaža</button>
+    <button class="chip" data-cat="Servis">Programiranje</button>
   </div>
 
       <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
@@ -1015,17 +1015,17 @@ async function renderJournals(){
     </div>`).join('') || `<div class='text-sm italic' style="color:var(--muted)">Ni dnevnikov.</div>`;
 }
 
-
-/* ===================== PLAN: /workplan/month ===================== */
+/* ===================== PLAN: /workplan/month (FIX) ===================== */
 /* — Glavni state — */
 let calMonth = new Date(); calMonth.setDate(1);
 let planMonth = { days:{} }; // { 'YYYY-MM-DD': [ {projectId, people[], time,title,category,status, note, statuses{email:status}} ] }
-let activeFilter = 'all';     // 'all' | 'KNX'|'AJAX'|'Shelly'|'General' (tu jih imenuješ: Groba/Fina/Programiranje/Splošno)
+let activeFilter = 'all';     // 'all' | 'General' | 'Elektro' | 'Programiranje' | 'Servis'
 
 /* — Pomožne — */
-const calGrid = document.getElementById('calGrid');
-const monthLabelEl = document.getElementById('monthLabel');
-const weekWindowEl = document.getElementById('weekWindow');
+const calGrid       = document.getElementById('calGrid');
+const monthLabelEl  = document.getElementById('monthLabel');
+const weekWindowEl  = document.getElementById('weekWindow'); // lahko manjka v tvojem HTML — varno preverjamo
+const canEdit       = () => isOwnerCeoVodja();
 
 function ymd(d){ return d.toISOString().slice(0,10); }
 function monthStartKey(){ const d=new Date(calMonth); d.setDate(1); return ymd(d); }
@@ -1038,7 +1038,6 @@ function weekRangeOfMonth(d){
   const lastSunday=new Date(e); const day2=(e.getDay()+6)%7; lastSunday.setDate(e.getDate()+(6-day2));
   return `${firstMonday.getDate()}. ${firstMonday.getMonth()+1}. – ${lastSunday.getDate()}. ${lastSunday.getMonth()+1}.`;
 }
-const canEdit = ()=> isOwnerCeoVodja();
 
 /* — API — */
 async function loadPlanMonth(){
@@ -1049,7 +1048,6 @@ async function loadPlanMonth(){
   }catch(e){}
   planMonth = {days:{}};
 }
-
 async function savePlanMonth(){
   try{
     const body = { start: monthStartKey(), days: planMonth.days };
@@ -1062,12 +1060,13 @@ async function savePlanMonth(){
   }catch(e){ alert('Napaka pri shranjevanju'); }
 }
 
-/* — Filter gumbi (Kategorije) — */
-document.querySelectorAll('.filter-chip').forEach(btn=>{
+/* — Filter čipi (popravek: .chip + data-cat) — */
+document.querySelectorAll('.chip').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    activeFilter = btn.dataset.filter || 'all';
+    const cat = btn.dataset.cat || 'Vse';
+    activeFilter = (cat==='Vse') ? 'all' : cat; // tvoje oznake: General/Elektro/Programiranje/Servis
     drawCalendar();
   });
 });
@@ -1083,7 +1082,6 @@ document.getElementById('planSave')?.addEventListener('click', async ()=>{
 
 /* — Vstopna točka za zavihek Plan — */
 async function renderPlan(){
-  // preklop pod-pogledov glede na vloge
   const mgr = isOwnerCeoVodja(); const emp = isEmployeeOrStudent();
   document.getElementById('plan-month-wrap')?.classList.toggle('hidden', !mgr);
   document.getElementById('plan-week-wrap')?.classList.toggle('hidden', !emp);
@@ -1107,8 +1105,8 @@ async function renderCalendar(){
 }
 
 function drawCalendar(){
-  monthLabelEl.textContent = monthLabel();
-  weekWindowEl.textContent = weekRangeOfMonth(calMonth);
+  if(monthLabelEl) monthLabelEl.textContent = monthLabel();
+  if(weekWindowEl) weekWindowEl.textContent = weekRangeOfMonth(calMonth);
 
   const first = new Date(calMonth); first.setDate(1);
   const lead = (first.getDay()+6)%7; // Monday=0
@@ -1120,7 +1118,7 @@ function drawCalendar(){
     const key = ymd(d);
     const inMonth = d.getMonth()===calMonth.getMonth();
     const all = planMonth.days[key] || [];
-    const filtered = all.filter(it => activeFilter==='all' || normalizeCategory(it.category)===normalizeCategory(activeFilter));
+    const filtered = all.filter(it => activeFilter==='all' || (it.category||'General')===activeFilter);
 
     const hdr = `
       <div class="flex items-center justify-between mb-2">
@@ -1155,55 +1153,49 @@ function drawCalendar(){
       </div>`;
   }).join('');
 
-  // KPI (imaš samo Skupno + Opravljenih)
+  // KPI (tvoj HTML: kpiAll/kpiHigh/kpiDone)
   const month = calMonth.getMonth(), year=calMonth.getFullYear();
-  let total=0, done=0;
+  let total=0, done=0, high=0; // high = 0 (v tvojem formatu ni prioritete; ohranjamo števec za prihodnost)
   Object.entries(planMonth.days).forEach(([date, arr])=>{
     const d = new Date(date); if(d.getMonth()!==month || d.getFullYear()!==year) return;
     (arr||[]).forEach(it=>{
-      if(activeFilter!=='all' && normalizeCategory(it.category)!==normalizeCategory(activeFilter)) return;
+      if(activeFilter!=='all' && (it.category||'General')!==activeFilter) return;
       total++; if(isItemDone(it)) done++;
+      // če dodaš prioriteto npr. it.priority==='Visoka' → high++
     });
   });
-  const statTotal = document.getElementById('statTotal');
-  const statDone  = document.getElementById('statDone');
-  if(statTotal) statTotal.textContent = total;
-  if(statDone)  statDone.textContent  = done;
+  document.getElementById('kpiAll')?.textContent  = total;
+  document.getElementById('kpiDone')?.textContent = done;
+  document.getElementById('kpiHigh')?.textContent = high;
 }
 
-function normalizeCategory(c){
-  // tvoje gumbe: Groba inštalacija => "KNX", Fina => "AJAX", Programiranje => "Shelly", Splošno => "General"
-  const s = (c||'').toLowerCase();
-  if(s.includes('groba')) return 'KNX';
-  if(s.includes('fina'))  return 'AJAX';
-  if(s.includes('program')) return 'Shelly';
-  if(s.includes('splo')) return 'General';
-  // fallback na originalno (če je predmet že v kraticah)
-  if(['knx','ajax','shelly','general'].includes(s)) return s[0].toUpperCase()+s.slice(1);
-  return 'General';
-}
-
-/* — Modal (uporablja obstoječa polja!) — */
+/* — Modal (poravnano na pm* ID-je v tvojem HTML) — */
 let pm_ctx = { dayKey:null, index:null, isEdit:false };
 
 function openPlanModal(dayKey, idx=null){
   pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
 
   // privzeta postavka
-  let it = { projectId: projects[0]?.id, people: [], time:'', title:'', category:'Splošno', status:'V teku', note:'' };
+  let it = { projectId: projects[0]?.id||null, people: [], time:'', title:'', category:'General', status:'V teku', note:'' };
 
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
   }
 
-  // napolni polja modala (UPORABLJAMO tvoje ID-je!)
-  document.getElementById('taskDate').value     = (new Date(dayKey)).toISOString().slice(0,10);
-  document.getElementById('taskTime').value     = it.time || '';
-  document.getElementById('taskTitle').value    = it.title || '';
-  document.getElementById('taskCategory').value = it.category || 'Splošno';
-  document.getElementById('taskStatus').value   = it.status || 'V teku';
-  document.getElementById('taskNotes').value    = it.note || '';
+  // napolni polja modala
+  document.getElementById('pmDate').value     = (new Date(dayKey)).toISOString().slice(0,10);
+  document.getElementById('pmTime').value     = it.time || '';
+  document.getElementById('pmTitle').value    = it.title || '';
+  document.getElementById('pmCategory').value = it.category || 'General';
+  document.getElementById('pmStatus').value   = it.status || 'V teku';
+  document.getElementById('pmNotes').value    = it.note || '';
+
+  // projekt (če želiš imeti realni izbor projekta, tu ga lahko dodaš; trenutno ga držimo implicitno)
+  const projSel = document.getElementById('pmProject');
+  if(projSel){
+    projSel.innerHTML = projects.map(p=>`<option value="${p.id}" ${p.id===it.projectId?'selected':''}>${p.name}</option>`).join('');
+  }
 
   // ekipa
   const box = document.getElementById('pmPeople');
@@ -1217,24 +1209,23 @@ function openPlanModal(dayKey, idx=null){
     </label>`).join('');
 
   // UI
-  document.getElementById('modalTitle').textContent = pm_ctx.isEdit ? 'Uredi nalogo' : 'Nova naloga';
-  document.getElementById('deleteTask').classList.toggle('hidden', !pm_ctx.isEdit);
+  document.getElementById('pmSave')?.classList.remove('hidden');
+  document.getElementById('pmCancel')?.classList.remove('hidden');
   showModal();
 }
 
-function showModal(){ document.getElementById('planModal').classList.remove('hidden'); document.getElementById('planModal').classList.add('flex'); }
-function hideModal(){ document.getElementById('planModal').classList.add('hidden'); document.getElementById('planModal').classList.remove('flex'); }
+function showModal(){ const m=document.getElementById('planModal'); m.classList.remove('hidden'); m.classList.add('flex'); }
+function hideModal(){ const m=document.getElementById('planModal'); m.classList.add('hidden'); m.classList.remove('flex'); }
 
 function collectModal(){
-  const dayKey   = ymd(new Date(document.getElementById('taskDate').value));
-  const time     = document.getElementById('taskTime').value.trim();
-  const title    = document.getElementById('taskTitle').value.trim();
-  const category = document.getElementById('taskCategory').value;
-  const status   = document.getElementById('taskStatus').value;
-  const note     = document.getElementById('taskNotes').value.trim();
+  const dayKey   = ymd(new Date(document.getElementById('pmDate').value));
+  const time     = document.getElementById('pmTime').value.trim();
+  const title    = document.getElementById('pmTitle').value.trim();
+  const category = document.getElementById('pmCategory').value;
+  const status   = document.getElementById('pmStatus').value;
+  const note     = document.getElementById('pmNotes').value.trim();
   const people   = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
-  // projectId ni v modalu -> privzeto prvi projekt (če obstaja)
-  const projectId = (projects[0]?.id) || null;
+  const projectId = (document.getElementById('pmProject')?.value) || (projects[0]?.id) || null;
 
   const obj = { projectId, people, time, title, category, status, note };
   if(status==='Opravljeno'){
@@ -1256,16 +1247,10 @@ window.addPlanItem = addPlanItem;
 window.editPlanItem = editPlanItem;
 window.removePlanItem = removePlanItem;
 
-/* — Gumbi v modalu — */
-document.getElementById('closeModal')?.addEventListener('click', hideModal);
-document.getElementById('cancelModal')?.addEventListener('click', hideModal);
-document.getElementById('deleteTask')?.addEventListener('click', async ()=>{
-  if(!pm_ctx.isEdit) return;
-  (planMonth.days[pm_ctx.dayKey]||[]).splice(pm_ctx.index,1);
-  hideModal(); drawCalendar(); await savePlanMonth();
-});
-document.getElementById('taskForm')?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
+/* — Gumbi v modalu (poravnano na pm* gumbe) — */
+document.getElementById('pmClose')?.addEventListener('click', hideModal);
+document.getElementById('pmCancel')?.addEventListener('click', hideModal);
+document.getElementById('pmSave')?.addEventListener('click', async ()=>{
   const { dayKey, obj } = collectModal();
   (planMonth.days[dayKey] ||= []);
   if(pm_ctx.isEdit){
@@ -1286,7 +1271,7 @@ function weekRange(d){
   return days;
 }
 async function renderWeek(){
-  await loadPlanMonth(); // dovolj, ker se bere isti mesec
+  await loadPlanMonth();
   const days = weekRange(weekRef);
   document.getElementById('weekLabel').textContent =
     `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
@@ -1328,15 +1313,12 @@ async function renderWeek(){
   document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
 }
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
-  // dovoljena samo nastavitev na 'Opravljeno' (in enosmerno zaklepanje)
   (planMonth.days[dayKey] ||= []);
   const it = planMonth.days[dayKey][idx]; if(!it) return;
   it.statuses ||= {};
   const current = it.statuses[me.email] || 'V teku';
   if (current === 'Opravljeno' && val !== 'Opravljeno') {
-    // zaklenjeno
-    await renderWeek();
-    return;
+    await renderWeek(); return; // zaklenjeno
   }
   it.statuses[me.email] = val;
   await savePlanMonth();
@@ -1344,7 +1326,7 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
 };
 
 /* — Pomagalček — */
-function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;","—":"—",">":"&gt;","\"":"&quot;"}[m])); }
 
 /* ===== Sign out clears ===== */
 </script>
