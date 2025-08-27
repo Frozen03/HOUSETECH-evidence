@@ -113,6 +113,41 @@
 .btn{ min-height:44px; }
 select, input, textarea{ min-height:44px; }
 
+/* Lepši checkbox */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 0.35rem;
+  background: var(--card);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✔";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 12px;
+  color: white;
+  transform: translate(-50%, -50%);
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--primary-700);
+}
+
+
 /* kartice malo več “air” na telefonu */
 @media (max-width:640px){
   .card{ padding:1rem; border-radius:1rem; }
@@ -254,7 +289,6 @@ select, input, textarea{ min-height:44px; }
 
     <div class="plan-kpis">
       <div class="kpi-pill"><i class="far fa-calendar-check mr-1"></i><span>Skupno</span> <b id="kpiAll">0</b></div>
-      <div class="kpi-pill"><i class="fas fa-circle-exclamation mr-1"></i><span>Visokih</span> <b id="kpiHigh">0</b></div>
       <div class="kpi-pill"><i class="fas fa-check mr-1"></i><span>Opravljenih</span> <b id="kpiDone">0</b></div>
     </div>
   </div>
@@ -266,9 +300,10 @@ select, input, textarea{ min-height:44px; }
     <div class="text-xs" style="color:var(--muted)">Kategorije:</div>
     <button class="chip active" data-cat="Vse">Vse</button>
     <button class="chip" data-cat="General">Splošno</button>
-    <button class="chip" data-cat="Elektro">Elektro</button>
-    <button class="chip" data-cat="Programiranje">KNX</button>
-    <button class="chip" data-cat="Servis">Shelly</button>
+    <button class="chip" data-cat="Elektro">Groba inštalacija</button>
+    <button class="chip" data-cat="Programiranje">Fina inštalacija</button>
+    <button class="chip" data-cat="Programiranje">Programiranje</button>
+    <button class="chip" data-cat="Servis">Servis</button>
   </div>
 
       <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-1" style="color:var(--muted)">
@@ -333,8 +368,9 @@ select, input, textarea{ min-height:44px; }
         <div>
           <label class="block text-sm mb-1">Kategorija</label>
           <select id="pmCategory">
-            <option>General</option>
-            <option>Elektro</option>
+            <option>Splošno</option>
+            <option>Groba inštalacija</option>
+            <option>Fina inštalacija</option>
             <option>Programiranje</option>
             <option>Servis</option>
           </select>
@@ -1027,14 +1063,11 @@ function countMonthStats() {
     (items || []).forEach(it => {
       if (activeCategory !== 'Vse' && it.category !== activeCategory) return;
       all++;
-      // "visoka" – če uporabljaš prioriteto, jo tu preveri; drugače lahko High = category=="Elektro" ali kar želiš
-      if ((it.priority || '').toLowerCase() === 'visoka') high++;
       if (isItemDone(it)) done++;
     });
   });
 
   document.getElementById('kpiAll').textContent  = all;
-  document.getElementById('kpiHigh').textContent = high;
   document.getElementById('kpiDone').textContent = done;
 }
 
