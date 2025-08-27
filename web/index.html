@@ -937,64 +937,129 @@ function prepareReportFilters(){
 }
 function renderReports(){ /* sem lahko dodaš obstoječo logiko poročil */ }
 
+<script>
 /* ===================== PLAN: /workplan/month ===================== */
+/* — Glavni state — */
 let calMonth = new Date(); calMonth.setDate(1);
-let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note, statuses?:{[email]: 'V teku'|'Opravljeno'}} ]
+let planMonth = { days:{} }; // { 'YYYY-MM-DD': [ {projectId, people[], time,title,category,status, note, statuses{email:status}} ] }
+let activeFilter = 'all';     // 'all' | 'KNX'|'AJAX'|'Shelly'|'General' (tu jih imenuješ: Groba/Fina/Programiranje/Splošno)
 
+/* — Pomožne — */
 const calGrid = document.getElementById('calGrid');
-document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
-document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await loadPlanMonth(); drawCalendar(); });
-document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth = new Date(); calMonth.setDate(1); await loadPlanMonth(); drawCalendar(); });
-document.getElementById('planSave')?.addEventListener('click', async ()=>{ if(!isOwnerCeoVodja()) return alert('Samo Owner/CEO/vodja.'); await savePlanMonth(); });
+const monthLabelEl = document.getElementById('monthLabel');
+const weekWindowEl = document.getElementById('weekWindow');
 
 function ymd(d){ return d.toISOString().slice(0,10); }
 function monthStartKey(){ const d=new Date(calMonth); d.setDate(1); return ymd(d); }
 function monthLabel(){ return calMonth.toLocaleDateString('sl-SI',{month:'long',year:'numeric'}); }
+function startOfMonth(d){ const x=new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x; }
+function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+function weekRangeOfMonth(d){
+  const s=startOfMonth(d), e=endOfMonth(d);
+  const firstMonday=new Date(s); const day=(s.getDay()+6)%7; firstMonday.setDate(s.getDate()-day);
+  const lastSunday=new Date(e); const day2=(e.getDay()+6)%7; lastSunday.setDate(e.getDate()+(6-day2));
+  return `${firstMonday.getDate()}. ${firstMonday.getMonth()+1}. – ${lastSunday.getDate()}. ${lastSunday.getMonth()+1}.`;
+}
+const canEdit = ()=> isOwnerCeoVodja();
+
+/* — API — */
+async function loadPlanMonth(){
+  try{
+    const q = new URLSearchParams({ start: monthStartKey() }).toString();
+    const r = await fetch(API_BASE + '/workplan/month?' + q, { headers:{ Authorization:'Bearer '+accessToken }});
+    if(r.ok){ planMonth = await r.json(); if(!planMonth.days) planMonth={days:{}}; return; }
+  }catch(e){}
+  planMonth = {days:{}};
+}
+
+async function savePlanMonth(){
+  try{
+    const body = { start: monthStartKey(), days: planMonth.days };
+    const r = await fetch(API_BASE + '/workplan/month', {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+      body: JSON.stringify(body)
+    });
+    if(!r.ok){ const e=await r.json().catch(()=>({})); alert(e.error||'Napaka pri shranjevanju'); }
+  }catch(e){ alert('Napaka pri shranjevanju'); }
+}
+
+/* — Filter gumbi (Kategorije) — */
+document.querySelectorAll('.filter-chip').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter || 'all';
+    drawCalendar();
+  });
+});
+
+/* — Navigacija mesecev — */
+document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await renderCalendar(); });
+document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await renderCalendar(); });
+document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth=new Date(); calMonth.setDate(1); await renderCalendar(); });
+document.getElementById('planSave')?.addEventListener('click', async ()=>{
+  if(!canEdit()) return alert('Samo Owner/CEO/vodja');
+  await savePlanMonth(); alert('Plan shranjen.');
+});
+
+/* — Vstopna točka za zavihek Plan — */
 async function renderPlan(){
-  document.getElementById('plan-month-wrap').classList.toggle('hidden', !isOwnerCeoVodja());
-  document.getElementById('plan-week-wrap').classList.toggle('hidden', !isEmployeeOrStudent());
-  if(isOwnerCeoVodja()){ await renderCalendar(); }
-  if(isEmployeeOrStudent()){ await renderWeek(); }
+  // preklop pod-pogledov glede na vloge
+  const mgr = isOwnerCeoVodja(); const emp = isEmployeeOrStudent();
+  document.getElementById('plan-month-wrap')?.classList.toggle('hidden', !mgr);
+  document.getElementById('plan-week-wrap')?.classList.toggle('hidden', !emp);
+  if(mgr) await renderCalendar();
+  if(emp) await renderWeek();
 }
-async function renderCalendar(){
-  await loadPlanMonth();
-  bindCategoryChips();     
-  drawCalendar();
-}
+
+/* — Barve/zapolnjenost statusa — */
 function isItemDone(it){
   if (it.status === 'Opravljeno') return true;
-  const people = Array.isArray(it.people) ? it.people : [];
-  if (!people.length) return false;
+  const ppl = Array.isArray(it.people) ? it.people : [];
+  if (!ppl.length) return false;
   const st = it.statuses || {};
-  return people.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
+  return ppl.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
+}
+
+/* — Izris mesečnega koledarja — */
+async function renderCalendar(){
+  await loadPlanMonth();
+  drawCalendar();
 }
 
 function drawCalendar(){
-  document.getElementById('monthLabel').textContent = monthLabel();
-  document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '' : '';
+  monthLabelEl.textContent = monthLabel();
+  weekWindowEl.textContent = weekRangeOfMonth(calMonth);
 
   const first = new Date(calMonth); first.setDate(1);
-  const firstWeekday = (first.getDay()+6)%7; // pon=0
-  const start = new Date(first); start.setDate(first.getDate()-firstWeekday);
+  const lead = (first.getDay()+6)%7; // Monday=0
+  const start = new Date(first); start.setDate(first.getDate()-lead);
+  const cells = Array.from({length:42},(_,i)=>{ const d=new Date(start); d.setDate(start.getDate()+i); return d; });
 
-  const cells=[]; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
+  const todayIso = ymd(new Date());
   calGrid.innerHTML = cells.map(d=>{
     const key = ymd(d);
-    const inMonth = d.getMonth() === calMonth.getMonth();
-    const items = planMonth.days[key] || [];
-    const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
+    const inMonth = d.getMonth()===calMonth.getMonth();
+    const all = planMonth.days[key] || [];
+    const filtered = all.filter(it => activeFilter==='all' || normalizeCategory(it.category)===normalizeCategory(activeFilter));
 
-    const list = items.map((it, idx) => {
-      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
-      const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
-      const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
+    const hdr = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold">${d.getDate()}.</div>
+        <div class="text-xs" style="color:var(--muted)">${d.toLocaleDateString('sl-SI',{weekday:'short'})}</div>
+      </div>`;
 
+    const items = filtered.map((it, idx)=>{
+      const projName = projects.find(p=>p.id===it.projectId)?.name || '—';
+      const peopleNames = (it.people||[]).map(e => usersDir[e]?.name || e);
+      const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
       return `
         <div class="cal-item ${colorCls}">
-          <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
-          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-          ${isOwnerCeoVodja() ? `
+          <div class="font-semibold truncate">${it.title || projName}</div>
+          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time+' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${escapeHtml(it.note)}</div>` : ''}
+          ${canEdit() && inMonth ? `
             <div class="flex justify-end gap-1 mt-1">
               <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
               <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
@@ -1002,236 +1067,208 @@ function drawCalendar(){
         </div>`;
     }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
-    const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
-    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
+    const addBtn = canEdit() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+
+    return `
+      <div class="cal-cell ${key===todayIso?'outline outline-2 outline-[var(--primary)]':''}">
+        ${hdr}
+        <div>${items || `<div class="text-xs italic" style="color:var(--muted)">Ni nalog</div>`}</div>
+        ${addBtn}
+      </div>`;
   }).join('');
 
-countMonthStats();
-}
-
-/* -------- KPI & Filter -------- */
-let activeCategory = 'Vse';
-
-function countMonthStats() {
-  // šteje samo dni v prikazanem mesecu
-  const year = calMonth.getFullYear();
-  const month = calMonth.getMonth();
-
-  let all = 0, high = 0, done = 0;
-
-  Object.entries(planMonth.days || {}).forEach(([date, items]) => {
-    const d = new Date(date);
-    if (d.getFullYear() !== year || d.getMonth() !== month) return;
-
-    (items || []).forEach(it => {
-      if (activeCategory !== 'Vse' && it.category !== activeCategory) return;
-      all++;
-      // "visoka" – če uporabljaš prioriteto, jo tu preveri; drugače lahko High = category=="Elektro" ali kar želiš
-      if ((it.priority || '').toLowerCase() === 'visoka') high++;
-      if (isItemDone(it)) done++;
+  // KPI (imaš samo Skupno + Opravljenih)
+  const month = calMonth.getMonth(), year=calMonth.getFullYear();
+  let total=0, done=0;
+  Object.entries(planMonth.days).forEach(([date, arr])=>{
+    const d = new Date(date); if(d.getMonth()!==month || d.getFullYear()!==year) return;
+    (arr||[]).forEach(it=>{
+      if(activeFilter!=='all' && normalizeCategory(it.category)!==normalizeCategory(activeFilter)) return;
+      total++; if(isItemDone(it)) done++;
     });
   });
-
-  document.getElementById('kpiAll').textContent  = all;
-  document.getElementById('kpiHigh').textContent = high;
-  document.getElementById('kpiDone').textContent = done;
+  const statTotal = document.getElementById('statTotal');
+  const statDone  = document.getElementById('statDone');
+  if(statTotal) statTotal.textContent = total;
+  if(statDone)  statDone.textContent  = done;
 }
 
-function bindCategoryChips(){
-  document.querySelectorAll('.plan-filters .chip').forEach(ch=>{
-    ch.addEventListener('click', ()=>{
-      document.querySelectorAll('.plan-filters .chip').forEach(c=>c.classList.remove('active'));
-      ch.classList.add('active');
-      activeCategory = ch.getAttribute('data-cat') || 'Vse';
-      drawCalendar();
-    });
-  });
+function normalizeCategory(c){
+  // tvoje gumbe: Groba inštalacija => "KNX", Fina => "AJAX", Programiranje => "Shelly", Splošno => "General"
+  const s = (c||'').toLowerCase();
+  if(s.includes('groba')) return 'KNX';
+  if(s.includes('fina'))  return 'AJAX';
+  if(s.includes('program')) return 'Shelly';
+  if(s.includes('splo')) return 'General';
+  // fallback na originalno (če je predmet že v kraticah)
+  if(['knx','ajax','shelly','general'].includes(s)) return s[0].toUpperCase()+s.slice(1);
+  return 'General';
 }
 
-
-
-// urejanje
-/* === helpers za modal === */
+/* — Modal (uporablja obstoječa polja!) — */
 let pm_ctx = { dayKey:null, index:null, isEdit:false };
-
-function pm_fillProjects(){
-  const sel = document.getElementById('pmProject');
-  sel.innerHTML = projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-}
-
-function pm_fillPeople(selectedEmails=[]){
-  const box = document.getElementById('pmPeople');
-  const arr = Object.entries(usersDir)
-    .map(([email,u])=>({email, name:u?.name||email}))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  box.innerHTML = arr.map(u=>`
-    <label class="flex items-center gap-2 border rounded-lg px-2 py-1">
-      <input type="checkbox" value="${u.email}" ${selectedEmails.includes(u.email)?'checked':''}>
-      <span class="truncate">${u.name} <span class="text-xs" style="color:var(--muted)">• ${u.email}</span></span>
-    </label>`).join('');
-}
 
 function openPlanModal(dayKey, idx=null){
   pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
 
-  pm_fillProjects();
-  const d = new Date(dayKey); document.getElementById('pmDate').value = d.toISOString().slice(0,10);
-
-  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'General', status:'V teku' };
+  // privzeta postavka
+  let it = { projectId: projects[0]?.id, people: [], time:'', title:'', category:'Splošno', status:'V teku', note:'' };
 
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
   }
 
-  document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
-  document.getElementById('pmTime').value     = it.time || '';
-  document.getElementById('pmTitle').value    = it.title || '';
-  document.getElementById('pmCategory').value = it.category || 'General';
-  document.getElementById('pmStatus').value   = it.status || 'V teku';
-  document.getElementById('pmNotes').value    = it.note || '';
+  // napolni polja modala (UPORABLJAMO tvoje ID-je!)
+  document.getElementById('taskDate').value     = (new Date(dayKey)).toISOString().slice(0,10);
+  document.getElementById('taskTime').value     = it.time || '';
+  document.getElementById('taskTitle').value    = it.title || '';
+  document.getElementById('taskCategory').value = it.category || 'Splošno';
+  document.getElementById('taskStatus').value   = it.status || 'V teku';
+  document.getElementById('taskNotes').value    = it.note || '';
 
-  pm_fillPeople(Array.isArray(it.people)?it.people:[]);
+  // ekipa
+  const box = document.getElementById('pmPeople');
+  const arr = Object.entries(usersDir)
+    .map(([email,u])=>({email, name:u?.name||email}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  box.innerHTML = arr.map(u=>`
+    <label class="flex items-center gap-2 border rounded-lg px-2 py-1">
+      <input type="checkbox" value="${u.email}" ${(it.people||[]).includes(u.email)?'checked':''}>
+      <span class="truncate">${u.name} <span class="text-xs" style="color:var(--muted)">• ${u.email}</span></span>
+    </label>`).join('');
 
-  document.getElementById('planModal').classList.remove('hidden');
+  // UI
+  document.getElementById('modalTitle').textContent = pm_ctx.isEdit ? 'Uredi nalogo' : 'Nova naloga';
+  document.getElementById('deleteTask').classList.toggle('hidden', !pm_ctx.isEdit);
+  showModal();
 }
 
-function closePlanModal(){
-  document.getElementById('planModal').classList.add('hidden');
-}
+function showModal(){ document.getElementById('planModal').classList.remove('hidden'); document.getElementById('planModal').classList.add('flex'); }
+function hideModal(){ document.getElementById('planModal').classList.add('hidden'); document.getElementById('planModal').classList.remove('flex'); }
 
-function pm_collect(){
-  const dayKey = pm_ctx.dayKey;
-  const projectId = document.getElementById('pmProject').value;
-  const time      = document.getElementById('pmTime').value.trim();
-  const title     = document.getElementById('pmTitle').value.trim();
-  const category  = document.getElementById('pmCategory').value;
-  const status    = document.getElementById('pmStatus').value;
-  const note      = document.getElementById('pmNotes').value.trim();
-
-  const people = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
+function collectModal(){
+  const dayKey   = ymd(new Date(document.getElementById('taskDate').value));
+  const time     = document.getElementById('taskTime').value.trim();
+  const title    = document.getElementById('taskTitle').value.trim();
+  const category = document.getElementById('taskCategory').value;
+  const status   = document.getElementById('taskStatus').value;
+  const note     = document.getElementById('taskNotes').value.trim();
+  const people   = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
+  // projectId ni v modalu -> privzeto prvi projekt (če obstaja)
+  const projectId = (projects[0]?.id) || null;
 
   const obj = { projectId, people, time, title, category, status, note };
-
-  // če je status pri kreiranju 'Opravljeno', inicializiraj statuses za vse izbrane
   if(status==='Opravljeno'){
-    obj.statuses = {};
-    people.forEach(e=> obj.statuses[e]='Opravljeno');
+    obj.statuses = {}; people.forEach(e=> obj.statuses[e]='Opravljeno');
   }
   return { dayKey, obj };
 }
 
-/* === public API za koledar === */
-async function addPlanItem(dayKey){ openPlanModal(dayKey, null); }
-function editPlanItem(dayKey, idx){ openPlanModal(dayKey, idx); }
+/* — Javni handlerji — */
+async function addPlanItem(dayKey){ if(!canEdit()) return; openPlanModal(dayKey, null); }
+function editPlanItem(dayKey, idx){ if(!canEdit()) return; openPlanModal(dayKey, idx); }
+function removePlanItem(dayKey, idx){
+  if(!canEdit()) return;
+  if(!confirm('Odstrani postavko?')) return;
+  (planMonth.days[dayKey]||[]).splice(idx,1);
+  drawCalendar(); savePlanMonth();
+}
+window.addPlanItem = addPlanItem;
+window.editPlanItem = editPlanItem;
+window.removePlanItem = removePlanItem;
 
-/* === init gumbi === */
-['pmClose','pmCancel'].forEach(id=>document.getElementById(id).addEventListener('click', closePlanModal));
-document.getElementById('pmSave').addEventListener('click', async ()=>{
-  const { dayKey, obj } = pm_collect();
+/* — Gumbi v modalu — */
+document.getElementById('closeModal')?.addEventListener('click', hideModal);
+document.getElementById('cancelModal')?.addEventListener('click', hideModal);
+document.getElementById('deleteTask')?.addEventListener('click', async ()=>{
+  if(!pm_ctx.isEdit) return;
+  (planMonth.days[pm_ctx.dayKey]||[]).splice(pm_ctx.index,1);
+  hideModal(); drawCalendar(); await savePlanMonth();
+});
+document.getElementById('taskForm')?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const { dayKey, obj } = collectModal();
   (planMonth.days[dayKey] ||= []);
   if(pm_ctx.isEdit){
     planMonth.days[dayKey][pm_ctx.index] = { ...(planMonth.days[dayKey][pm_ctx.index]||{}), ...obj };
   }else{
     planMonth.days[dayKey].push({ ...obj, statuses:{} });
   }
-  closePlanModal();
+  hideModal();
   drawCalendar();
   await savePlanMonth();
 });
-function removePlanItem(dayKey, idx){
-  if(!confirm('Odstrani postavko?')) return;
-  (planMonth.days[dayKey]||[]).splice(idx,1);
-  drawCalendar();
-}
-// API <-> lokalno
-function monthStoreKey(){ return 'workplan:month:'+monthStartKey().slice(0,7); } // YYYY-MM
-async function loadPlanMonth(){
-  try{
-    const q = new URLSearchParams({ start: monthStartKey() }).toString();
-    const r = await fetch(API_BASE+'/workplan/month?'+q,{headers:{Authorization:'Bearer '+accessToken}});
-    if(r.ok){ planMonth = await r.json(); if(!planMonth.days) planMonth={days:{}}; return; }
-  }catch(e){}
-  planMonth = JSON.parse(localStorage.getItem(monthStoreKey())||'{"days":{}}');
-}
-async function savePlanMonth(){
-  try{
-    const r = await fetch(API_BASE+'/workplan/month',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},body:JSON.stringify({ start: monthStartKey(), days: planMonth.days })});
-    if(r.ok){ alert('Plan shranjen.'); return; }
-  }catch(e){}
-  localStorage.setItem(monthStoreKey(), JSON.stringify(planMonth));
-  alert('Plan shranjen lokalno (BETA).');
-}
 
-/* ===== Tedenski pogled (employee/student) ===== */
+/* — Tedenski pogled (za zaposlene/študente) — */
 let weekRef = new Date();
-function weekRange(d){ // vrne pon..sob
+function weekRange(d){
   const day=(d.getDay()+6)%7; const mon=new Date(d); mon.setDate(d.getDate()-day);
   const days=[]; for(let i=0;i<6;i++){ const dd=new Date(mon); dd.setDate(mon.getDate()+i); days.push(dd); }
   return days;
 }
 async function renderWeek(){
-  await loadPlanMonth(); // mesečni paket (dovolj za teden)
+  await loadPlanMonth(); // dovolj, ker se bere isti mesec
   const days = weekRange(weekRef);
   document.getElementById('weekLabel').textContent =
     `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
   const wg = document.getElementById('weekGrid');
   wg.innerHTML = days.map(d => {
-  const key   = ymd(d);
-  const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
+    const key = ymd(d);
+    const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
 
-  const list = items.map((it, idx) => {
-    const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-    const st   = (it.statuses || {})[me.email] || 'V teku';
-
-    const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
-    const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
-    const locked   = st === 'Opravljeno' ? 'disabled' : '';
+    const list = items.map((it, idx) => {
+      const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+      const st   = (it.statuses || {})[me.email] || 'V teku';
+      const team = (it.people||[]).filter(e=>e!==me.email).map(e=>usersDir[e]?.name || e);
+      const locked = st==='Opravljeno' ? 'disabled' : '';
+      return `
+        <div class="p-2 border rounded-lg mb-1">
+          <div class="font-medium">${it.title || proj}</div>
+          ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${escapeHtml(it.note)}</div>` : ''}
+          <div class="text-xs mt-1" style="color:var(--muted)">${team.length?`Ekipa: ${team.join(', ')}`:'Ekipa: — (samo ti)'}</div>
+          <div class="mt-2 flex items-center gap-2">
+            <label class="text-xs">Status:</label>
+            <select class="text-xs border rounded px-2 py-1"
+                    onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
+              <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
+              <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
+            </select>
+            ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+          </div>
+        </div>`;
+    }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
 
     return `
-      <div class="p-2 border rounded-lg mb-1">
-        <div class="font-medium">${it.title ? it.title : proj}</div>
-        ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
-        <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-        <div class="mt-2 flex items-center gap-2">
-          <label class="text-xs">Status:</label>
-          <select class="text-xs border rounded px-2 py-1"
-                  onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
-            <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
-            <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
-          </select>
-          ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-        </div>
+      <div class="border rounded-lg p-2">
+        <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
+        ${list}
       </div>`;
-  }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
-
-  return `
-    <div class="border rounded-lg p-2">
-      <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
-      ${list}
-    </div>`;
-}).join('');
+  }).join('');
 
   document.getElementById('weekPrev').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()-7); await renderWeek(); };
   document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
 }
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
+  // dovoljena samo nastavitev na 'Opravljeno' (in enosmerno zaklepanje)
   (planMonth.days[dayKey] ||= []);
   const it = planMonth.days[dayKey][idx]; if(!it) return;
   it.statuses ||= {};
-  const cur = it.statuses[me.email] || 'V teku';
-  if (cur === 'Opravljeno' && val !== 'Opravljeno') {
-    alert('Ta postavka je že označena kot Opravljeno in je zaklenjena.');
-    // osveži UI, da se select spet onemogoči (če je bil kako omogočen)
+  const current = it.statuses[me.email] || 'V teku';
+  if (current === 'Opravljeno' && val !== 'Opravljeno') {
+    // zaklenjeno
     await renderWeek();
     return;
   }
   it.statuses[me.email] = val;
   await savePlanMonth();
-  // takoj osvežimo, da se select zaklene
   await renderWeek();
 };
+
+/* — Pomagalček — */
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+</script>
+
 
 /* ===== DNEVNIKI (manager) ===== */
 function setDefaultDates(idFrom, idTo){
