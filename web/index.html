@@ -12,127 +12,169 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- EXCEL & PDF -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
 
   <style>
-    :root {
-      --primary: #2563EB;     /* Modra */
-      --secondary: #10B981;   /* Zelena */
-      --accent: #8B5CF6;      /* Vijolična */
-      --warning: #F59E0B;     /* Oranžna */
-      --danger: #EF4444;      /* Rdeča */
-
+    :root{
+      --primary:#3B82F6; --primary-700:#2563EB; --secondary:#10B981; --danger:#EF4444;
       --bg:#F3F4F6; --card:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
       --tab-active:#FFFFFF; --tab-inactive:#F3F4F6;
     }
-    .dark-mode {
+    .dark-mode{
       --bg:#0F172A; --card:#111827; --text:#E5E7EB; --muted:#A1A1AA; --border:#1F2937;
       --tab-active:#111827; --tab-inactive:#1F2937;
     }
 
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
+    body{
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color: var(--text);
+      min-height: 100vh;
       transition: background .3s, color .3s;
+      background:
+        url("../img/logo.png") center/contain no-repeat fixed,
+        var(--bg);
+    }
+    body.dark-mode{
+      background:
+        linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.95)),
+        url("../img/housetech-dark.png") center/cover no-repeat fixed;
     }
 
-    /* Kartice s sencami */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 1.25rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-      transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-    }
-    .card:hover {
-      box-shadow: 0 14px 28px rgba(0,0,0,0.12), 0 10px 10px rgba(0,0,0,0.10);
-    }
+    .card{ background: var(--card); border:1px solid var(--border); border-radius:1rem; box-shadow: 0 4px 8px rgba(0,0,0,.05); padding:1.25rem; }
+    .btn{ border-radius:.75rem; padding:.6rem 1.1rem; font-weight:600; display:inline-flex; gap:.5rem; align-items:center; }
+    .btn-primary{ background:var(--primary); color:#fff; } .btn-primary:hover{ background:var(--primary-700); }
+    .btn-outline{ border:1px solid var(--border); color:var(--text); background:transparent; }
+    .btn-danger{ background:var(--danger); color:#fff; }
 
-    /* Logo gradient */
-    .logo {
-      font-weight: 800;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
+.logo {
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-    /* Tab aktivni */
-    .tab-active {
-      border-bottom: 3px solid var(--primary);
-      background: var(--tab-active);
-      color: var(--primary);
-      font-weight: 700;
-    }
+    input, select, textarea{ width:100%; border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:.75rem; padding:.7rem .9rem; }
+    input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
 
-    /* Koledar celice */
-    .cal-cell {
-      border-radius: 12px;
-      padding: 12px;
-      min-height: 140px;
-      transition: all 0.2s ease;
-    }
-    .cal-cell:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+    .tab-btn{ padding:.5rem 1rem; font-weight:600; border:1px solid var(--border); }
+    .tab-active{ background:var(--tab-active); }
+    .tab-inactive{ background:var(--tab-inactive); color:var(--muted); }
+    .tab-btn + .tab-btn{ border-left:none; }
+    .tabs-wrap{ border-radius:1rem; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 
-    /* Barvno kodiranje kategorij */
-    .cal-item.cal-general { background: #EFF6FF; border-color: #93C5FD; }
-    .cal-item.cal-elektro { background: #F0FDF4; border-color: #86EFAC; }
-    .cal-item.cal-programiranje { background: #F5F3FF; border-color: #C4B5FD; }
-    .cal-item.cal-servis { background: #FEF3C7; border-color: #FCD34D; }
+    .tbl { width:100%; border-collapse: collapse; }
+    .tbl th,.tbl td { border:1px solid var(--border); padding:.5rem .6rem; font-size:.875rem; }
+    .tbl th { background:var(--tab-inactive); text-align:left; }
 
-    /* Ripple efekt */
-    .btn {
-      transition: all 0.2s ease;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn:after {
-      content: '';
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 5px; height: 5px;
-      background: rgba(255,255,255,0.5);
-      opacity: 0;
-      border-radius: 100%;
-      transform: scale(1,1) translate(-50%);
-    }
-    .btn:focus:not(:active)::after {
-      animation: ripple 1s ease-out;
-    }
-    @keyframes ripple {
-      0% { transform: scale(0,0); opacity:1; }
-      20% { transform: scale(25,25); opacity:1; }
-      100% { transform: scale(50,50); opacity:0; }
-    }
+    /* koledar (mesečni plan) */
+    .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
+    .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
+    .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
+    .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
+    .cal-locked{ opacity:.6; pointer-events:none; }
 
-    /* Odzivnost */
-    @media (max-width: 640px) {
-      .cal-grid { grid-template-columns: repeat(1, minmax(0,1fr)); gap: 0.75rem; }
-      .cal-cell { min-height: 120px; padding: 0.75rem; }
-      .plan-header { flex-direction: column; align-items: stretch; gap: 0.75rem; }
-      .plan-nav, .plan-kpis { width: 100%; justify-content: center; }
-    }
+/* header koledarja */
+.plan-header{ display:flex; gap:.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.plan-nav{ display:flex; gap:.5rem; align-items:center; }
+.plan-nav .btn{ padding:.4rem .7rem; }
+#monthLabel{ font-weight:600; font-size:1.05rem; min-width:auto; }
+
+.plan-kpis{ display:flex; gap:.5rem; align-items:center; }
+.kpi-pill{ border:1px solid var(--border); background:var(--tab-active); border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem; }
+.kpi-pill span{ font-weight:600; color:var(--muted); margin-left:.35rem; }
+
+.plan-filters{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0 .5rem; }
+.chip{ border:1px solid var(--border); background:var(--tab-inactive); border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
+.chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+
+
+/* barve za postavke v koledarju */
+.cal-item{ transition: background .2s, border-color .2s, color .2s; }
+.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
+.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
+.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; } /* rumena */
+.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
+
+    /* tedenski plan */
+    .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
+    .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
+    .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
+
+/* lepši sticky tabs na mobitelu */
+#tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
+.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
+.tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:.5rem; padding:.25rem; }
+.tab-btn{ border-radius:.75rem; }
+
+/* večji “tap targets” */
+.btn{ min-height:44px; }
+select, input, textarea{ min-height:44px; }
+
+/* kartice malo več “air” na telefonu */
+@media (max-width:640px){
+  .card{ padding:1rem; border-radius:1rem; }
+  header .text-2xl{ font-size:1.35rem; }
+  #authCard .g_id_signin, #authCard #g_id_onload{ transform:scale(0.95); transform-origin:left; }
+}
+
+
+/* ===== Mobile tweaks for Plan dela ===== */
+@media (max-width: 1024px){
+  .tabs-wrap{ display:flex; overflow:auto; }
+  .tab-btn{ white-space:nowrap; font-size:.9rem; }
+  /* mesečni koledar: 4 stolpci na tablici */
+  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+}
+
+@media (max-width: 768px){
+  h1{ font-size:1.25rem; }
+  .card{ padding:1rem; }
+  /* mesečni koledar: 3 stolpci na “velikem” telefonu */
+  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  /* tedenski pogled: dva stolpca */
+  .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
+@media (max-width: 640px){
+  .tabs-wrap{ gap:.25rem; }
+  .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
+
+  /* mesečni koledar: 2 stolpca na telefonu */
+  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .cal-cell{ min-height:150px; }
+
+  /* tedenski pogled: 1 stolpec – po dnevu pod seboj */
+  .week-grid{ grid-template-columns: 1fr; }
+  /* status select ne prekriva drugih elementov */
+  .week-grid .p-2 .mt-2{ flex-wrap:wrap; }
+  .week-grid .p-2 select{ width:100%; }
+  .week-grid .p-2 .font-medium{ font-size:.95rem; }
+  .week-grid .p-2 .text-xs{ font-size:.8rem; }
+  #weekLabel{ min-width:0; font-size:.95rem; }
+}
+
+/* na mobitelu naj vse lepo prelomi */
+@media (max-width:640px){
+  .plan-header{ align-items:flex-start; }
+  .plan-kpis{ width:100%; justify-content:flex-start; }
+}
+    
   </style>
 </head>
 <body>
 <div class="max-w-6xl mx-auto py-6 px-4">
   <header class="flex items-start justify-between mb-6">
-    <div class="flex items-center gap-3">
-      <!-- Logo z ikono -->
-      <h1 class="text-2xl font-bold flex items-center gap-3">
-        <img src="img/logo-icon.svg" alt="HOUSETECH" class="h-8 w-8">
-        <span class="logo">HOUSETECH</span>
-        <span>Ops</span>
-      </h1>
-      <button id="themeToggle" class="btn btn-outline p-2 !px-3"><i class="fas fa-moon"></i></button>
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-bold flex items-center gap-3"><span class="logo">HOUSETECH</span><span>Ops</span></h1>
+        <button id="themeToggle" class="btn btn-outline p-2 !px-3" title="Preklopi temo"><i class="fas fa-moon"></i></button>
+      </div>
+      <p class="text-sm" style="color:var(--muted)">Prijava z Google</p>
     </div>
+    <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
   </header>
 
   <!-- PRIJAVA -->
