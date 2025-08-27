@@ -1252,7 +1252,7 @@ document.getElementById('pmClose')?.addEventListener('click', hideModal);
 document.getElementById('pmCancel')?.addEventListener('click', hideModal);
 document.getElementById('pmSave')?.addEventListener('click', async ()=>{
   const { dayKey, obj } = collectModal();
-  (planMonth.days[dayKey] ||= []);
+  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
   if(pm_ctx.isEdit){
     planMonth.days[dayKey][pm_ctx.index] = { ...(planMonth.days[dayKey][pm_ctx.index]||{}), ...obj };
   }else{
@@ -1313,7 +1313,7 @@ async function renderWeek(){
   document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
 }
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
-  (planMonth.days[dayKey] ||= []);
+  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
   const it = planMonth.days[dayKey][idx]; if(!it) return;
   it.statuses ||= {};
   const current = it.statuses[me.email] || 'V teku';
