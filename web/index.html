@@ -962,7 +962,8 @@ function groupMaterials(logs, mode){
     const key = mode==='day' ? date.toISOString().slice(0,10)
               : mode==='month' ? date.toISOString().slice(0,7)
               : 'Skupno';
-    (result[proj] ||= {}); (result[proj][key] ||= {});
+    if (!result[proj]) result[proj] = {};
+    if (!result[proj][key]) result[proj][key] = {};
     (l.materials||[]).forEach(m=>{
       if(!m?.name) return;
       const cur = result[proj][key][m.name] || { qty:0, uom: m.uom||'kos' };
@@ -1315,7 +1316,7 @@ async function renderWeek(){
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
   if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
   const it = planMonth.days[dayKey][idx]; if(!it) return;
-  it.statuses ||= {};
+  if (!it.statuses) it.statuses = {};
   const current = it.statuses[me.email] || 'V teku';
   if (current === 'Opravljeno' && val !== 'Opravljeno') {
     await renderWeek(); return; // zaklenjeno
