@@ -1241,7 +1241,7 @@ function editPlanItem(dayKey, idx){ if(!canEdit()) return; openPlanModal(dayKey,
 function removePlanItem(dayKey, idx){
   if(!canEdit()) return;
   if(!confirm('Odstrani postavko?')) return;
-  (planMonth.days[dayKey]||[]).splice(idx,1);
+  if (!planMonth.days[dayKey]) planMonth.days[dayKey] = [];
   drawCalendar(); savePlanMonth();
 }
 window.addPlanItem = addPlanItem;
