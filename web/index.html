@@ -1015,8 +1015,7 @@ async function renderJournals(){
     </div>`).join('') || `<div class='text-sm italic' style="color:var(--muted)">Ni dnevnikov.</div>`;
 }
 
-/* ===== Sign out clears ===== */
-<script>
+
 /* ===================== PLAN: /workplan/month ===================== */
 /* — Glavni state — */
 let calMonth = new Date(); calMonth.setDate(1);
@@ -1346,8 +1345,8 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
 
 /* — Pomagalček — */
 function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
-</script>
 
+/* ===== Sign out clears ===== */
 </script>
 </body>
 </html>
