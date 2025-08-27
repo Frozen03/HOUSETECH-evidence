@@ -5,7 +5,7 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-  "start": "rm -f /data/jobs.json && node server.js"
+  "start": "rm -f /data/jobs.json",
     "dev": "nodemon server/server.js"
   },
   "dependencies": {
