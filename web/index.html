@@ -338,30 +338,26 @@ input[type="checkbox"]:hover {
     </div>
   </section>
 
-<!-- ========== PLAN MODAL ========== -->
+<!-- ========== PLAN MODAL (CLEAN) ========== -->
 <div id="planModal" class="fixed inset-0 z-[100] hidden">
-  <div class="absolute inset-0 bg-black/50"></div>
-<div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <!-- overlay -->
+  <button type="button" class="absolute inset-0 bg-black/50" aria-label="Zapri" onclick="closePlanModal()"></button>
+
+  <!-- vsebina: bottom-sheet na mobitelu, centered na >=sm -->
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="w-full sm:max-w-3xl card relative
-                rounded-none sm:rounded-2xl
+                rounded-t-2xl sm:rounded-2xl
                 max-h-[85vh] overflow-y-auto">
 
+      <!-- close -->
       <button type="button" id="pmClose"
-              class="absolute right-3 top-3 btn btn-outline !py-1 !px-2">
+              class="absolute right-3 top-3 btn btn-outline !py-1 !px-2"
+              onclick="closePlanModal()">
         <i class="fas fa-times"></i>
       </button>
 
       <h3 class="text-lg font-semibold mb-3 sticky top-0 pt-2 pb-2"
           style="background:var(--card); z-index:1;">
-        <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
-      </h3>
-  <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-3xl card relative">
-      <button type="button" id="pmClose" class="absolute right-3 top-3 btn btn-outline !py-1 !px-2">
-        <i class="fas fa-times"></i>
-      </button>
-
-      <h3 class="text-lg font-semibold mb-3">
         <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
       </h3>
 
@@ -405,14 +401,12 @@ input[type="checkbox"]:hover {
         </div>
 
         <div class="md:col-span-2">
-  <label class="block text-sm mb-1">Ekipa (zaposleni)</label>
-  <div id="pmPeople"
-       class="grid grid-cols-1 md:grid-cols-2 gap-2
-              p-2 border rounded-lg
-              max-h-none overflow-visible
-              md:max-h-44 md:overflow-auto"></div>
-</div>
-
+          <label class="block text-sm mb-1">Ekipa (zaposleni)</label>
+          <div id="pmPeople"
+               class="grid grid-cols-1 md:grid-cols-2 gap-2
+                      p-2 border rounded-lg
+                      max-h-64 overflow-auto"></div>
+        </div>
 
         <div class="md:col-span-2">
           <label class="block text-sm mb-1">Opombe</label>
@@ -421,12 +415,15 @@ input[type="checkbox"]:hover {
       </div>
 
       <div class="flex justify-end gap-2 mt-4">
-        <button id="pmCancel" class="btn btn-outline"><i class="fas fa-ban"></i> Prekliči</button>
+        <button id="pmCancel" class="btn btn-outline" onclick="closePlanModal()">
+          <i class="fas fa-ban"></i> Prekliči
+        </button>
         <button id="pmSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani</button>
       </div>
     </div>
   </div>
 </div>
+
 
   <!-- ===== Dnevnik del (vnos) ===== -->
   <section id="tab-jobs" class="hidden">
@@ -1312,8 +1309,7 @@ function openPlanModal(dayKey, idx=null){
   pm_fillProjects();
   const d = new Date(dayKey); document.getElementById('pmDate').value = d.toISOString().slice(0,10);
 
-  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'General', status:'V teku' };
-
+  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'Splošno', status:'V teku' };
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
@@ -1322,18 +1318,21 @@ function openPlanModal(dayKey, idx=null){
   document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
   document.getElementById('pmTime').value     = it.time || '';
   document.getElementById('pmTitle').value    = it.title || '';
-  document.getElementById('pmCategory').value = it.category || 'General';
+  document.getElementById('pmCategory').value = it.category || 'Splošno';
   document.getElementById('pmStatus').value   = it.status || 'V teku';
   document.getElementById('pmNotes').value    = it.note || '';
 
   pm_fillPeople(Array.isArray(it.people)?it.people:[]);
 
   document.getElementById('planModal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden'); // blokiraj ozadje
 }
 
 function closePlanModal(){
   document.getElementById('planModal').classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
 }
+
 
 function pm_collect(){
   const dayKey = pm_ctx.dayKey;
