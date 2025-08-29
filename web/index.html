@@ -1366,6 +1366,27 @@ function daysBetweenInclusive(startISO, endISO){
   return out;
 }
 
+function openPlanModal(dayKey, idx=null){
+  pm_ctx = { dayKey, index: 
+  idx, isEdit: 
+  idx!==null }; pm_fillProjects(); const baseDay = new 
+  Date(dayKey); const baseISO = ymd(baseDay);
+  document.getElementById('pmDateFrom').value = baseISO;
+  document.getElementById('pmDateTo').value = ""; // prazen = samo en dan
+  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'Splošno', status:'V teku' };
+  if(pm_ctx.isEdit){ 
+    const src = (planMonth.days[dayKey]||[])[idx] || {};
+     it = { ...it, ...src }; }
+      document.getElementById('pmProject').value = it.projectId || projects[0]?.id;
+      document.getElementById('pmTime').value = it.time || ''; 
+      document.getElementById('pmTitle').value = it.title || '';
+      document.getElementById('pmCategory').value = it.category || 'Splošno';
+      document.getElementById('pmStatus').value = it.status || 'V teku'; 
+      document.getElementById('pmNotes').value = it.note || ''; pm_fillPeople(Array.isArray(it.people)?it.people:[]); 
+      document.getElementById('planModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
+ }
+
+
 /* ---- zbiranje podatkov iz modala (OD–DO) ---- */
 function pm_collect(){
   const fromISO  = document.getElementById('pmDateFrom').value;
