@@ -147,6 +147,13 @@ input[type="checkbox"]:hover {
   border-color: var(--primary-700);
 }
 
+#pmPeople label{
+  min-height: 44px;
+}
+#pmPeople input[type="checkbox"]{
+  width:18px; height:18px;
+}
+
 
 /* kartice malo več “air” na telefonu */
 @media (max-width:640px){
@@ -174,8 +181,15 @@ input[type="checkbox"]:hover {
 }
 
 @media (max-width: 640px){
-  .tabs-wrap{ gap:.25rem; }
-  .tab-btn{ padding:.45rem .7rem; font-size:.85rem; }
+  .tabs-wrap{
+    overflow: visible;   
+    flex-wrap: wrap;      
+    gap:.35rem;
+  }
+  .tab-btn{
+    flex: 1 1 calc(50% - .35rem);
+    text-align:center;
+  }
 
   /* mesečni koledar: 2 stolpca na telefonu */
   .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -327,6 +341,20 @@ input[type="checkbox"]:hover {
 <!-- ========== PLAN MODAL ========== -->
 <div id="planModal" class="fixed inset-0 z-[100] hidden">
   <div class="absolute inset-0 bg-black/50"></div>
+<div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-3xl card relative
+                rounded-none sm:rounded-2xl
+                max-h-[85vh] overflow-y-auto">
+
+      <button type="button" id="pmClose"
+              class="absolute right-3 top-3 btn btn-outline !py-1 !px-2">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <h3 class="text-lg font-semibold mb-3 sticky top-0 pt-2 pb-2"
+          style="background:var(--card); z-index:1;">
+        <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
+      </h3>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-3xl card relative">
       <button type="button" id="pmClose" class="absolute right-3 top-3 btn btn-outline !py-1 !px-2">
@@ -377,9 +405,14 @@ input[type="checkbox"]:hover {
         </div>
 
         <div class="md:col-span-2">
-          <label class="block text-sm mb-1">Ekipa (zaposleni)</label>
-          <div id="pmPeople" class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-44 overflow-auto border rounded-lg p-2"></div>
-        </div>
+  <label class="block text-sm mb-1">Ekipa (zaposleni)</label>
+  <div id="pmPeople"
+       class="grid grid-cols-1 md:grid-cols-2 gap-2
+              p-2 border rounded-lg
+              max-h-none overflow-visible
+              md:max-h-44 md:overflow-auto"></div>
+</div>
+
 
         <div class="md:col-span-2">
           <label class="block text-sm mb-1">Opombe</label>
