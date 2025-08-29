@@ -264,7 +264,7 @@ app.put("/jobs/:id", authRequired, (req, res) => {
     if (idx === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
 
     const j = jobs[idx];
-    const admin = isAdmin(req.user);
+    const admin = hasManagerRole(req.user);
     const owner = j.email === req.user.email;
     if (!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
 
@@ -290,7 +290,7 @@ app.delete("/jobs/:id", authRequired, (req, res) => {
     if (idx === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
 
     const j = jobs[idx];
-    const admin = isAdmin(req.user);
+    const admin = hasManagerRole(req.user);
     const owner = j.email === req.user.email;
     if (!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
 
