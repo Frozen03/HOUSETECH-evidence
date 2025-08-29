@@ -1424,24 +1424,24 @@ function closePlanModal(){
 
 
 function pm_collect(){
-  const dayKey = pm_ctx.dayKey;
+  const fromISO  = document.getElementById('pmDateFrom').value;
+  const toRaw    = document.getElementById('pmDateTo').value;
+  const toISO    = (toRaw && toRaw >= fromISO) ? toRaw : fromISO;
+
   const projectId = document.getElementById('pmProject').value;
   const time      = document.getElementById('pmTime').value.trim();
   const title     = document.getElementById('pmTitle').value.trim();
   const category  = document.getElementById('pmCategory').value;
   const status    = document.getElementById('pmStatus').value;
   const note      = document.getElementById('pmNotes').value.trim();
-
-  const people = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
+  const people    = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
 
   const obj = { projectId, people, time, title, category, status, note };
-
-  // če je status pri kreiranju 'Opravljeno', inicializiraj statuses za vse izbrane
-  if(status==='Opravljeno'){
+  if(status === 'Opravljeno'){
     obj.statuses = {};
-    people.forEach(e=> obj.statuses[e]='Opravljeno');
+    people.forEach(e => obj.statuses[e] = 'Opravljeno');
   }
-  return { dayKey, obj };
+  return { fromISO, toISO, obj };
 }
 
 /* === public API za koledar === */
