@@ -1301,7 +1301,6 @@ countMonthStats();
 let activeCategory = 'Vse';
 
 function countMonthStats() {
-  // šteje samo dni v prikazanem mesecu
   const year = calMonth.getFullYear();
   const month = calMonth.getMonth();
 
@@ -1394,27 +1393,6 @@ function openPlanModal(dayKey, idx=null){
 
   document.getElementById('planModal').classList.remove('hidden');
   document.body.classList.add('overflow-hidden');
-}
-
-/* ---- zbiranje podatkov iz modala ---- */
-function pm_collect(){
-  const fromISO   = document.getElementById('pmDateFrom').value;
-  const toISOraw  = document.getElementById('pmDateTo').value;
-  const toISO     = (toISOraw && toISOraw >= fromISO) ? toISOraw : fromISO;
-
-  const projectId = document.getElementById('pmProject').value;
-  const time      = document.getElementById('pmTime').value.trim();
-  const title     = document.getElementById('pmTitle').value.trim();
-  const category  = document.getElementById('pmCategory').value;
-  const status    = document.getElementById('pmStatus').value;
-  const note      = document.getElementById('pmNotes').value.trim();
-  const people    = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
-
-  const obj = { projectId, people, time, title, category, status, note };
-  if(status==='Opravljeno'){
-    obj.statuses = {}; people.forEach(e=> obj.statuses[e]='Opravljeno');
-  }
-  return { fromISO, toISO, obj };
 }
 
 /* ---- shranjevanje: razporedi po vseh dnevih ---- */
