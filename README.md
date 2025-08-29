@@ -1,9 +1,26 @@
-# HOUSETECH Ops — FINAL
+# HOUSETECH Ops — FINAL v2
 
-## Kaj je v tej verziji
+## Kaj je novega (CHANGELOG)
+
+### 🆕 Nova verzija (2025-08)
+- **Registracija prisotnosti**
+  - Odstranjen obvezen izbor **projekta** → prihod/odhod/malica se beleži tudi brez projekta.
+  - Gumbi **Odhod**, **Začetek malice**, **Konec malice**, **Ponovni prihod** niso več na voljo, če uporabnik trenutno ni prijavljen (samo začetni “Prihod”).
+- **Dnevnik del**
+  - Input polje za **Aktivnost** je podaljšano in povečano → primerno za daljše opise (npr. “Montaža stikal, vtičnic, vleka kablov, štemanje…”).
+  - Pravice za urejanje in brisanje:
+    - **Vsak uporabnik** lahko ureja/briše **svoje** dnevnike.
+    - **Owner/CEO** lahko urejata/brišeta **vse** dnevnike.
+- Ostalo
+  - Čiščenje UI: odstranjena polja, ki niso več relevantna (npr. projekt v prisotnosti).
+  - Popravki konsistence vlog (`Owner`, `CEO`, `vodja`, `zaposlen`, `študent`).
+
+---
+
+### 📦 Prejšnja verzija (2025-07)
 - Prijava z Google (GIS) → backend preveri ID token in izda JWT z vlogami.
 - **Owner/CEO**:
-  - vidita zavihek **Admin** (upravljanje uporabnikov/ projektov),
+  - vidita zavihek **Admin** (upravljanje uporabnikov/projektov),
   - vidita levi seznam projektov v **Dnevnik del**,
   - vidita zavihek **Poročila**.
 - Navadni uporabniki:
@@ -12,22 +29,12 @@
 - **Dnevnik del** podpira **več materialov** na vnos (Dodaj material).
 - “Prijava” gumb izgine po uspešni prijavi; pokaže se **Odjava**.
 
-## Zagon
-1) `server/.env`:
-```
-PORT=8787
-GOOGLE_CLIENT_ID=REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com
-JWT_SECRET=change_me_to_long_random_string
-```
-2) Backend:
-```
-cd server
-npm i
-npm start
-```
-3) Frontend: postrezi `web/index.html` (npr. `http-server` ali Live Server) na `http://localhost:5500/`.
+---
 
-## Opombe
-- Vloge so seedane v `server/server.js` (ROLE_MAP) in tudi v `db/schema_roles.sql`.
-- Shranjevanje ur in dnevnikov je lokalno (localStorage) – lahko nadgradimo na Postgres.
-© 2025 HOUSETECH
+## 🚀 Zagon
+
+1. Konfiguracija (`server/.env`):
+   ```env
+   PORT=8787
+   GOOGLE_CLIENT_ID=REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com
+   JWT_SECRET=change_me_to_long_random_string
