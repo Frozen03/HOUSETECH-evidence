@@ -1126,7 +1126,10 @@ function drawCalendar(){
     const key = ymd(d);
     const inMonth = d.getMonth() === calMonth.getMonth();
     const items = planMonth.days[key] || [];
-    const hdr = `<div class="cal-day"><span>${d.toLocaleDateString('sl-SI',{day:'2-digit'})}</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
+    const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
+const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
+const hdr = `<div class="cal-day"><span>${weekday}, ${dayNum}.</span>${!inMonth ? '<span class="text-xs" style="color:var(--muted)">off</span>' : ''}</div>`;
+
 
     const list = items.map((it, idx) => {
       const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
