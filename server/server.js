@@ -257,6 +257,42 @@ app.get("/jobs", authRequired, (req, res) => {
   res.json(list);
 });
 
+app.put("/jobs/:id", authRequired, (req, res) => {
+  const id = req.params.id;
+  const i = jobs.findIndex(j => j.id === id);
+  if(i === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
+
+  const j = jobs[i];
+  const admin = isAdmin(req.user);
+  const owner = j.email === req.user.email;
+  if(!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
+
+  const { projectId, activity, hours } = req.body || {};
+  if(typeof projectId === "string" && projectId.trim()) j.projectId = projectId.trim();
+  if(typeof activity === "string") j.activity = activity.trim();
+  if(typeof hours !== "undefined") j.hours = Number(hours || 0);
+
+  // (po želji bi tu lahko dodali tudi update materialov/fotk)
+  saveJobs();
+  res.json(j);
+});
+
+app.delete("/jobs/:id", authRequired, (req, res) => {
+  const id = req.params.id;
+  const i = jobs.findIndex(j => j.id === id);
+  if(i === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
+
+  const j = jobs[i];
+  const admin = isAdmin(req.user);
+  const owner = j.email === req.user.email;
+  if(!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
+
+  jobs.splice(i,1);
+  saveJobs();
+  res.status(204).end();
+});
+
+
 // ===== upload fotografij =====
 app.post("/upload", authRequired, upload.array("photos", 10), (req, res) => {
   const files = (req.files || []).map(f => ({
