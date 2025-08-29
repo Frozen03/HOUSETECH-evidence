@@ -1385,6 +1385,8 @@ function openPlanModal(dayKey, idx=null){
       document.getElementById('pmNotes').value = it.note || ''; pm_fillPeople(Array.isArray(it.people)?it.people:[]); 
       document.getElementById('planModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
  }
+
+
   closePlanModal();
   drawCalendar();
   await savePlanMonth();
