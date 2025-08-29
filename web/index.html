@@ -428,8 +428,14 @@ input[type="checkbox"]:hover {
             <label class="block text-sm font-medium mb-1">Fotografije / Video</label>
             <input id="logMedia" type="file" multiple accept="image/*,video/*" />
           </div>
-
-          <div class="flex justify-end"><button id="addLog" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Shrani vnos</button></div>
+          <div class="flex justify-end gap-2">
+              <button id="cancelEditLog" class="btn btn-outline hidden">
+                <i class="fas fa-ban mr-1"></i> Prekliči urejanje
+              </button>
+              <button id="addLog" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> Shrani vnos
+              </button>
+          </div>
         </div>
 
         <hr class="my-4" style="border-color:var(--border)" />
@@ -1039,29 +1045,110 @@ async function deleteLog(id){
   renderJobLogs();
 }
 
-async function editLog(id){
-  // preprosto urejanje: aktivnost + ure (lahko razširimo)
-  const cur = await fetch(API_BASE+'/jobs?'+new URLSearchParams({} ),{headers:{Authorization:'Bearer '+accessToken}})
-    .then(r=>r.ok?r.json():[]).then(list=>list.find(x=>x.id===id));
-  if(!cur) return alert('Dnevnik ni najden.');
+/* ============ Dnevnik: Add/Edit na ISTEM OBRAZCU ============ */
+let editingLogId = null;           // null => dodajanje, string => urejanje
+let editingPhotos = [];            // obstoječe fotke iz vnosa (če urejamo)
 
-  const newActivity = prompt('Uredi aktivnost:', cur.activity || '');
-  if(newActivity===null) return; // cancel
-  const newHoursStr = prompt('Uredi ure (npr. 3.5):', String(cur.hours || 0));
-  if(newHoursStr===null) return;
-  const newHours = parseFloat(newHoursStr||'0');
+// helper: reset obrazca v “dodajanje”
+function resetLogForm(){
+  editingLogId = null;
+  editingPhotos = [];
+  document.getElementById("logProject").value = projects[0]?.id || "";
+  document.getElementById("logActivity").value = "";
+  document.getElementById("logHours").value = "";
+  const mediaInput = document.getElementById('logMedia'); if(mediaInput) mediaInput.value = "";
+  materials = [];                  // global iz tvoje obstoječe logike
+  renderMaterials();
 
-  const r = await fetch(API_BASE+'/jobs/'+encodeURIComponent(id),{
-    method:'PUT',
-    headers:{'Content-Type':'application/json', Authorization:'Bearer '+accessToken},
-    body: JSON.stringify({ activity: newActivity.trim(), hours: isNaN(newHours)?0:newHours })
-  });
-  if(!r.ok){
-    const e=await r.json().catch(()=>({}));
-    return alert('Urejanje ni uspelo: '+(e.error||r.status));
-  }
-  renderJobLogs();
+  const saveBtn = document.getElementById("addLog");
+  if(saveBtn){ saveBtn.innerHTML = `<i class="fas fa-save mr-1"></i> Shrani vnos`; }
+  document.getElementById("cancelEditLog")?.classList.add("hidden");
 }
+
+// klik na Shrani/Posodobi
+document.getElementById("addLog")?.addEventListener("click", async ()=>{
+  if (!me) return alert("Najprej se prijavi.");
+
+  const pid = document.getElementById("logProject").value;
+  const activity = document.getElementById("logActivity").value.trim();
+  const hours = parseFloat(document.getElementById("logHours").value || "0");
+  if (!pid || !activity) return alert("Izpolni: projekt in aktivnost (ure po želji).");
+
+  const mats = (materials || []).filter(m => (m.name && m.name.trim()) || parseFloat(m.qty || "0") > 0);
+
+  // upload more media (če so izbrani)
+  const mediaInput = document.getElementById('logMedia');
+  let newFiles = [];
+  if(mediaInput && mediaInput.files && mediaInput.files.length){
+    const fd = new FormData();
+    [...mediaInput.files].forEach(f=>fd.append('photos', f));
+    const up = await fetch(API_BASE+'/upload',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fd});
+    if(!up.ok){ const e=await up.json().catch(()=>({})); return alert('Upload napaka: '+(e.error||up.status)); }
+    const j = await up.json(); newFiles = j.files || [];
+  }
+
+  if(!editingLogId){
+    /* === DODAJANJE === */
+    const res = await fetch(API_BASE+'/jobs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},
+      body:JSON.stringify({ projectId:pid, activity, hours, materials:mats, photos:newFiles })
+    });
+    if(!res.ok){ const e=await res.json().catch(()=>({})); return alert('Napaka: '+(e.error||res.status)); }
+  }else{
+    /* === UREJANJE === */
+    // obstoječe fotke (editingPhotos) + novouložene
+    const photos = [...editingPhotos, ...newFiles];
+    const r = await fetch(API_BASE+'/jobs/'+encodeURIComponent(editingLogId),{
+      method:'PUT',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+accessToken},
+      body: JSON.stringify({ projectId:pid, activity, hours, materials:mats, photos })
+    });
+    if(!r.ok){ const e=await r.json().catch(()=>({})); return alert('Urejanje ni uspelo: '+(e.error||r.status)); }
+  }
+
+  // reset UI
+  resetLogForm();
+  renderJobLogs();
+});
+
+// klik na Prekliči urejanje
+document.getElementById("cancelEditLog")?.addEventListener("click", ()=>{
+  resetLogForm();
+});
+
+// priklop uredi na isti obrazec
+async function editLog(id){
+  try{
+    const r=await fetch(API_BASE+'/jobs',{headers:{Authorization:'Bearer '+accessToken}});
+    const list = r.ok ? await r.json() : [];
+    const cur = list.find(x=>x.id===id);
+    if(!cur) return alert('Dnevnik ni najden.');
+
+    // preklop v “edit mode”
+    editingLogId = cur.id;
+    editingPhotos = Array.isArray(cur.photos) ? cur.photos : [];
+
+    // napolni obrazec
+    document.getElementById("logProject").value = cur.projectId || projects[0]?.id || "";
+    document.getElementById("logActivity").value = cur.activity || "";
+    document.getElementById("logHours").value = typeof cur.hours==="number" ? cur.hours : (cur.hours || 0);
+
+    materials = Array.isArray(cur.materials) ? JSON.parse(JSON.stringify(cur.materials)) : [];
+    renderMaterials();
+
+    // UI: gumb + preklic
+    const saveBtn = document.getElementById("addLog");
+    if(saveBtn){ saveBtn.innerHTML = `<i class="fas fa-save mr-1"></i> Posodobi dnevnik`; }
+    document.getElementById("cancelEditLog")?.classList.remove("hidden");
+
+    // skrolaj do obrazca (po želji)
+    document.getElementById("tab-jobs")?.scrollIntoView({behavior:"smooth", block:"start"});
+  }catch(e){
+    alert('Napaka pri branju dnevnika.');
+  }
+}
+
 
 
 
@@ -1125,6 +1212,7 @@ const inMonth = d.getMonth() === calMonth.getMonth();
 if (!inMonth) {
   return `<div class="cal-cell cal-out cal-locked"></div>`;
 }
+const items = planMonth.days[key] || [];
 const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
 const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
 const hdr = `<div class="cal-day"><span>${dayNum}., ${weekday}</span></div>`;
