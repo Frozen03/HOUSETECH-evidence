@@ -1385,32 +1385,6 @@ function openPlanModal(dayKey, idx=null){
       document.getElementById('pmNotes').value = it.note || ''; pm_fillPeople(Array.isArray(it.people)?it.people:[]); 
       document.getElementById('planModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
  }
-
-/* ---- SHRANI: razporedi po vseh dnevih v razponu ---- */
-document.getElementById('pmSave').addEventListener('click', async ()=>{
-  const { fromISO, toISO, obj } = pm_collect();
-  const days = daysBetweenInclusive(fromISO, toISO);
-
-  if (pm_ctx.isEdit){
-    const srcDay = pm_ctx.dayKey;
-    (planMonth.days[srcDay] ||= []);
-    // posodobi vnos na izvorni dan
-    planMonth.days[srcDay][pm_ctx.index] =
-      { ...(planMonth.days[srcDay][pm_ctx.index]||{}), ...obj };
-
-    // če je razpon daljši, dodaj kopije v ostale dni
-    days.filter(d => d !== srcDay).forEach(d=>{
-      (planMonth.days[d] ||= []);
-      planMonth.days[d].push({ ...obj, statuses:{} });
-    });
-  } else {
-    // nov vnos – všij v vsak dan razpona
-    days.forEach(d=>{
-      (planMonth.days[d] ||= []);
-      planMonth.days[d].push({ ...obj, statuses:{} });
-    });
-  }
-
   closePlanModal();
   drawCalendar();
   await savePlanMonth();
