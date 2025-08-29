@@ -969,35 +969,6 @@ function updatePresenceButtons(entries){
 /* ===== Dnevnik (ONLINE + media) ===== */
 document.getElementById("addMaterialRow")?.addEventListener("click", ()=>{ materials.push({name:'',qty:'',uom:'kos'}); renderMaterials(); });
 
-document.getElementById("addLog")?.addEventListener("click", async ()=>{
-  if (!me) return alert("Najprej se prijavi.");
-  const pid = document.getElementById("logProject").value;
-  const activity = document.getElementById("logActivity").value.trim();
-  const hours = parseFloat(document.getElementById("logHours").value || "0");
-  if (!pid || !activity) return alert("Izpolni: projekt in aktivnost (ure po želji).");
-  const mats = (materials || []).filter(m => (m.name && m.name.trim()) || parseFloat(m.qty || "0") > 0);
-
-  // 1) upload medijev
-  const mediaInput = document.getElementById('logMedia');
-  let photos = [];
-  if(mediaInput && mediaInput.files && mediaInput.files.length){
-    const fd = new FormData();
-    [...mediaInput.files].forEach(f=>fd.append('photos', f));
-    const up = await fetch(API_BASE+'/upload',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fd});
-    if(!up.ok){ const e=await up.json().catch(()=>({})); return alert('Upload napaka: '+(e.error||up.status)); }
-    const j = await up.json(); photos = j.files || [];
-  }
-
-  // 2) shrani job
-  const res = await fetch(API_BASE+'/jobs',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},body:JSON.stringify({ projectId:pid, activity, hours, materials:mats, photos })});
-  if(!res.ok){ const e=await res.json().catch(()=>({})); return alert('Napaka: '+(e.error||res.status)); }
-
-  // reset
-  document.getElementById("logActivity").value = ""; document.getElementById("logHours").value = "";
-  if(mediaInput) mediaInput.value = "";
-  materials = []; renderMaterials();
-  renderJobLogs();
-});
 
 async function renderJobLogs(){
   const wrap=document.getElementById('logList'); if(!wrap) return;
@@ -1215,7 +1186,7 @@ if (!inMonth) {
 const items = planMonth.days[key] || [];
 const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
 const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
-const hdr = `<div class="cal-day"><span>${dayNum}., ${weekday}</span></div>`;
+const hdr = `<div class="cal-day"><span>${dayNum}, ${weekday}</span></div>`;
 
     const list = items.map((it, idx) => {
       const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
