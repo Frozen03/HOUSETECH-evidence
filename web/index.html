@@ -1366,39 +1366,42 @@ function daysBetweenInclusive(startISO, endISO){
   return out;
 }
 
+/* ---- modal: odpri in predizpolni ---- */
+let pm_ctx = { dayKey:null, index:null, isEdit:false };
+
 function openPlanModal(dayKey, idx=null){
-  pm_ctx = { dayKey, index: 
-  idx, isEdit: 
-  idx!==null }; pm_fillProjects(); const baseDay = new 
-  Date(dayKey); const baseISO = ymd(baseDay);
+  pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
+
+  pm_fillProjects();
+
+  const baseISO = ymd(new Date(dayKey));
   document.getElementById('pmDateFrom').value = baseISO;
-  document.getElementById('pmDateTo').value = ""; // prazen = samo en dan
+  document.getElementById('pmDateTo').value   = ""; // prazen = samo en dan
+
   let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'Splošno', status:'V teku' };
-  if(pm_ctx.isEdit){ 
+  if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
-     it = { ...it, ...src }; }
-      document.getElementById('pmProject').value = it.projectId || projects[0]?.id;
-      document.getElementById('pmTime').value = it.time || ''; 
-      document.getElementById('pmTitle').value = it.title || '';
-      document.getElementById('pmCategory').value = it.category || 'Splošno';
-      document.getElementById('pmStatus').value = it.status || 'V teku'; 
-      document.getElementById('pmNotes').value = it.note || ''; pm_fillPeople(Array.isArray(it.people)?it.people:[]); 
-      document.getElementById('planModal').classList.remove('hidden'); document.body.classList.add('overflow-hidden');
- }
+    it = { ...it, ...src };
+  }
 
+  document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
+  document.getElementById('pmTime').value     = it.time || '';
+  document.getElementById('pmTitle').value    = it.title || '';
+  document.getElementById('pmCategory').value = it.category || 'Splošno';
+  document.getElementById('pmStatus').value   = it.status || 'V teku';
+  document.getElementById('pmNotes').value    = it.note || '';
+  pm_fillPeople(Array.isArray(it.people)?it.people:[]);
 
-  closePlanModal();
-  drawCalendar();
-  await savePlanMonth();
-});
-
+  document.getElementById('planModal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
 
 function closePlanModal(){
   document.getElementById('planModal').classList.add('hidden');
   document.body.classList.remove('overflow-hidden');
 }
 
-
+/* ---- zberi podatke (OD–DO) ---- */
 function pm_collect(){
   const fromISO  = document.getElementById('pmDateFrom').value;
   const toRaw    = document.getElementById('pmDateTo').value;
@@ -1414,8 +1417,7 @@ function pm_collect(){
 
   const obj = { projectId, people, time, title, category, status, note };
   if(status === 'Opravljeno'){
-    obj.statuses = {};
-    people.forEach(e => obj.statuses[e] = 'Opravljeno');
+    obj.statuses = {}; people.forEach(e => obj.statuses[e] = 'Opravljeno');
   }
   return { fromISO, toISO, obj };
 }
@@ -1424,20 +1426,37 @@ function pm_collect(){
 async function addPlanItem(dayKey){ openPlanModal(dayKey, null); }
 function editPlanItem(dayKey, idx){ openPlanModal(dayKey, idx); }
 
-/* === init gumbi === */
-['pmClose','pmCancel'].forEach(id=>document.getElementById(id).addEventListener('click', closePlanModal));
+/* === gumbi v modalu === */
+['pmClose','pmCancel'].forEach(id => document.getElementById(id).addEventListener('click', closePlanModal));
+
 document.getElementById('pmSave').addEventListener('click', async ()=>{
-  const { dayKey, obj } = pm_collect();
-  (planMonth.days[dayKey] ||= []);
+  const { fromISO, toISO, obj } = pm_collect();
+  const days = daysBetweenInclusive(fromISO, toISO);
+
   if(pm_ctx.isEdit){
-    planMonth.days[dayKey][pm_ctx.index] = { ...(planMonth.days[dayKey][pm_ctx.index]||{}), ...obj };
-  }else{
-    planMonth.days[dayKey].push({ ...obj, statuses:{} });
+    // posodobi izvorni dan
+    const srcDay = pm_ctx.dayKey;
+    (planMonth.days[srcDay] ||= []);
+    planMonth.days[srcDay][pm_ctx.index] = { ...(planMonth.days[srcDay][pm_ctx.index]||{}), ...obj };
+
+    // če je razpon daljši, dodaj kopije v ostale dneve
+    days.filter(d=>d!==srcDay).forEach(d=>{
+      (planMonth.days[d] ||= []);
+      planMonth.days[d].push({ ...obj, statuses:{} });
+    });
+  } else {
+    // nov vnos => za vsak dan v razponu
+    days.forEach(d=>{
+      (planMonth.days[d] ||= []);
+      planMonth.days[d].push({ ...obj, statuses:{} });
+    });
   }
+
   closePlanModal();
   drawCalendar();
   await savePlanMonth();
 });
+
 function removePlanItem(dayKey, idx){
   if(!confirm('Odstrani postavko?')) return;
   (planMonth.days[dayKey]||[]).splice(idx,1);
