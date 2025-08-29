@@ -19,10 +19,13 @@
 
   <style>
     :root{
-      --primary:#3B82F6; --primary-700:#2563EB; --secondary:#10B981; --danger:#EF4444;
-      --bg:#F3F4F6; --card:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
-      --tab-active:#FFFFFF; --tab-inactive:#F3F4F6;
-    }
+  --primary:#0071bc;        
+  --primary-700:#005a94;    
+  --secondary:#10B981; --danger:#EF4444;
+  --bg:#0071bc;              
+  --card:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
+  --tab-active:#FFFFFF; --tab-inactive:#F3F4F6;
+}
     .dark-mode{
       --bg:#0F172A; --card:#111827; --text:#E5E7EB; --muted:#A1A1AA; --border:#1F2937;
       --tab-active:#111827; --tab-inactive:#1F2937;
@@ -36,7 +39,27 @@
       background:
         url("../img/logo.png") center/contain no-repeat fixed,
         var(--bg);
+      position: relative;
     }
+
+body:not(.dark-mode) #tabsNav{
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 14px;
+  padding: .35rem .4rem;
+  backdrop-filter: blur(6px);
+}
+
+/* outline gumbi na svetlem naj ne bodo preveč “prozorni” */
+body:not(.dark-mode) .btn-outline{
+  background: #ffffff;
+  color:#0f172a;
+  border-color: rgba(0,0,0,.08);
+}
+body:not(.dark-mode) .btn-outline:hover{
+  border-color: rgba(0,0,0,.15);
+}
+
     body.dark-mode{
       background:
         linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.95)),
