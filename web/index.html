@@ -409,11 +409,17 @@ input[type="checkbox"]:hover {
         <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
       </h3>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-sm mb-1">Datum</label>
-          <input id="pmDate" type="date">
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:col-span-2">
+  <div>
+    <label class="block text-sm mb-1">Datum (od)</label>
+    <input id="pmDateFrom" type="date">
+  </div>
+  <div>
+    <label class="block text-sm mb-1">Datum (do, neobvezno)</label>
+    <input id="pmDateTo" type="date" placeholder="">
+  </div>
+</div>
+
         <div>
           <label class="block text-sm mb-1">Čas (od–do)</label>
           <input id="pmTime" placeholder="npr. 08:00–12:00">
@@ -1351,11 +1357,26 @@ function pm_fillPeople(selectedEmails=[]){
     </label>`).join('');
 }
 
+/* ---- helperji za razpon datumov ---- */
+function ymd(d){ return d.toISOString().slice(0,10); } // (že imaš v datoteki – če je, pusti!)
+function parseISO(s){ const d=new Date(s); d.setHours(12,0,0,0); return d; }
+function daysBetweenInclusive(startISO, endISO){
+  const out=[]; 
+  const s=parseISO(startISO); 
+  const e=endISO?parseISO(endISO):parseISO(startISO);
+  for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)) out.push(ymd(d));
+  return out;
+}
+
+/* ---- openPlanModal: napolni OD–DO ---- */
 function openPlanModal(dayKey, idx=null){
   pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
 
   pm_fillProjects();
-  const d = new Date(dayKey); document.getElementById('pmDate').value = d.toISOString().slice(0,10);
+  const baseDay = new Date(dayKey);
+  const baseISO = ymd(baseDay);
+  document.getElementById('pmDateFrom').value = baseISO;
+  document.getElementById('pmDateTo').value   = ""; // prazen = samo en dan
 
   let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'Splošno', status:'V teku' };
   if(pm_ctx.isEdit){
@@ -1373,8 +1394,57 @@ function openPlanModal(dayKey, idx=null){
   pm_fillPeople(Array.isArray(it.people)?it.people:[]);
 
   document.getElementById('planModal').classList.remove('hidden');
-  document.body.classList.add('overflow-hidden'); // blokiraj ozadje
+  document.body.classList.add('overflow-hidden');
 }
+
+/* ---- zbiranje podatkov iz modala ---- */
+function pm_collect(){
+  const fromISO   = document.getElementById('pmDateFrom').value;
+  const toISOraw  = document.getElementById('pmDateTo').value;
+  const toISO     = (toISOraw && toISOraw >= fromISO) ? toISOraw : fromISO;
+
+  const projectId = document.getElementById('pmProject').value;
+  const time      = document.getElementById('pmTime').value.trim();
+  const title     = document.getElementById('pmTitle').value.trim();
+  const category  = document.getElementById('pmCategory').value;
+  const status    = document.getElementById('pmStatus').value;
+  const note      = document.getElementById('pmNotes').value.trim();
+  const people    = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
+
+  const obj = { projectId, people, time, title, category, status, note };
+  if(status==='Opravljeno'){
+    obj.statuses = {}; people.forEach(e=> obj.statuses[e]='Opravljeno');
+  }
+  return { fromISO, toISO, obj };
+}
+
+/* ---- shranjevanje: razporedi po vseh dnevih ---- */
+document.getElementById('pmSave').addEventListener('click', async ()=>{
+  const { fromISO, toISO, obj } = pm_collect();
+  const days = daysBetweenInclusive(fromISO, toISO);
+
+
+  if(pm_ctx.isEdit){
+    const srcDay = pm_ctx.dayKey;
+    (planMonth.days[srcDay] ||= []);
+    planMonth.days[srcDay][pm_ctx.index] = { ...(planMonth.days[srcDay][pm_ctx.index]||{}), ...obj };
+
+    days.filter(d=>d!==srcDay).forEach(d=>{
+      (planMonth.days[d] ||= []);
+      planMonth.days[d].push({ ...obj, statuses:{} });
+    });
+  }else{
+
+    days.forEach(d=>{
+      (planMonth.days[d] ||= []);
+      planMonth.days[d].push({ ...obj, statuses:{} });
+    });
+  }
+
+  closePlanModal();
+  drawCalendar();
+  await savePlanMonth();
+});
 
 function closePlanModal(){
   document.getElementById('planModal').classList.add('hidden');
