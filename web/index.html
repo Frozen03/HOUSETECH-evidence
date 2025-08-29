@@ -466,13 +466,12 @@ input[type="checkbox"]:hover {
           <label class="block text-sm mb-1">Opombe</label>
           <textarea id="pmNotes" rows="3" placeholder="Dodatni detajli, materiali, ekipa…"></textarea>
         </div>
-      </div>
-
-      <div class="flex justify-end gap-2 mt-4">
+<div class="flex justify-end gap-2 mt-4">
         <button id="pmCancel" class="btn btn-outline" onclick="closePlanModal()">
           <i class="fas fa-ban"></i> Prekliči
         </button>
         <button id="pmSave" class="btn btn-primary"><i class="fas fa-save"></i> Shrani</button>
+      </div>
       </div>
     </div>
   </div>
@@ -1358,7 +1357,7 @@ function pm_fillPeople(selectedEmails=[]){
 }
 
 /* ---- helperji za razpon datumov ---- */
-function ymd(d){ return d.toISOString().slice(0,10); } // (že imaš v datoteki – če je, pusti!)
+function ymd(d){ return d.toISOString().slice(0,10); }
 function parseISO(s){ const d=new Date(s); d.setHours(12,0,0,0); return d; }
 function daysBetweenInclusive(startISO, endISO){
   const out=[]; 
