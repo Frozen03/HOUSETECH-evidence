@@ -252,10 +252,6 @@ input[type="checkbox"]:hover {
       <div id="presencePanel" class="card hidden">
         <h2 class="text-lg font-semibold mb-3"><i class="fas fa-user-clock mr-2 text-blue-500"></i>Registracija prisotnosti</h2>
         <div class="space-y-3">
-          <div>
-            <label class="block text-sm font-medium mb-1">Projekt</label>
-            <select id="currentProject"><option value="">— izberi —</option></select>
-          </div>
           <div class="grid grid-cols-2 gap-2">
             <button id="clockIn"  class="btn" style="background:#10B981;color:#fff;"><i class="fas fa-sign-in-alt"></i> Prihod</button>
             <button id="clockOut" class="btn" style="background:#EF4444;color:#fff;"><i class="fas fa-sign-out-alt"></i> Odhod</button>
@@ -410,10 +406,19 @@ input[type="checkbox"]:hover {
       <div class="card lg:col-span-2">
         <h2 class="text-lg font-semibold mb-3"><i class="fas fa-tasks mr-2 text-blue-500"></i>Dnevnik del</h2>
         <div class="space-y-3">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div><label class="block text-sm font-medium mb-1">Projekt</label><select id="logProject"></select></div>
-            <div><label class="block text-sm font-medium mb-1">Aktivnost</label><input id="logActivity" placeholder="npr. Montaža stikal..." /></div>
-            <div><label class="block text-sm font-medium mb-1">Ure</label><input id="logHours" type="number" step="0.25" placeholder="npr. 3.5" /></div>
+         <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div class="md:col-span-2">
+            <label class="block text-sm font-medium mb-1">Projekt</label>
+            <select id="logProject"></select>
+          </div>
+            <div class="md:col-span-3">
+              <label class="block text-sm font-medium mb-1">Aktivnost</label>
+              <textarea id="logActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
+            </div>
+            <div class="md:col-span-1">
+              <label class="block text-sm font-medium mb-1">Ure</label>
+              <input id="logHours" type="number" step="0.25" placeholder="npr. 8" />
+            </div>
           </div>
 
           <div>
@@ -870,41 +875,94 @@ const typeMap = { prihod:'in', odhod:'out', 'malica-začetek':'break-start', 'ma
   const btn=document.getElementById(id);
   if(btn){ btn.addEventListener('click', async ()=>{
     if(!me) return alert("Najprej se prijavi.");
-    const pid=document.getElementById('currentProject').value||null;
     const map={clockIn:'prihod',clockOut:'odhod',breakStart:'malica-začetek',breakEnd:'malica-konec'};
     const typ = typeMap[map[id]];
-    const res = await fetch(API_BASE+'/presence',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},body:JSON.stringify({type:typ, projectId:pid})});
+    const res = await fetch(API_BASE+'/presence',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},
+      body:JSON.stringify({type:typ})
+    });
     if(!res.ok){ const e=await res.json().catch(()=>({})); return alert("Napaka: "+(e.error||res.status)); }
-    renderTimeEntries();
+    await renderTimeEntries(); // osveži seznam in gumbe
   });}
 });
+
 const fmt=ts=>new Date(ts).toLocaleTimeString('sl-SI',{hour:'2-digit',minute:'2-digit'});
 const dmy=ts=>new Date(ts).toLocaleDateString('sl-SI');
 const projectName=id=>(projects.find(p=>p.id===id)?.name)||'';
+  
 async function renderTimeEntries(){
   const ul=document.getElementById('todayEntries');
   const today=new Date(); const start=new Date(today.getFullYear(),today.getMonth(),today.getDate()).getTime(); const end=start+86400000;
   const q = new URLSearchParams({ from:start, to:end }).toString();
   const r = await fetch(API_BASE+'/presence?'+q,{headers:{Authorization:'Bearer '+accessToken}});
   const entries = r.ok ? await r.json() : [];
-  if(!entries.length){ ul.innerHTML='<li class="text-center py-4" style="color:var(--muted)"><i class="far fa-clock text-2xl mb-2"></i><p>Ni vnosov za danes.</p></li>'; return; }
+  if(!entries.length){
+    ul.innerHTML='<li class="text-center py-4" style="color:var(--muted)"><i class="far fa-clock text-2xl mb-2"></i><p>Ni vnosov za danes.</p></li>';
+    updatePresenceButtons(entries);
+    return;
+  }
   ul.innerHTML=entries.sort((a,b)=>a.ts-b.ts).map(e=>`
     <li class="p-3 rounded-lg flex items-center justify-between" style="border:1px solid var(--border);">
       <div class="flex items-center"><i class="far fa-clock mr-2"></i>
         <div>
           <div class="font-medium">${e.type} ob ${fmt(e.ts)}</div>
-          <div class="text-xs" style="color:var(--muted)">${e.employee} • ${projectName(e.projectId)||"Brez projekta"}</div>
+          <div class="text-xs" style="color:var(--muted)">${e.employee}</div>
         </div>
       </div>
       ${e.email===me?.email ? `<button class="btn btn-outline !py-1 !px-2 text-xs" onclick="deletePresence('${e.id}')"><i class="fas fa-trash"></i></button>` : ``}
     </li>`).join('');
+  updatePresenceButtons(entries);
 }
+
 async function deletePresence(id){
   if(!confirm("Odstranim vnos?")) return;
   const r=await fetch(API_BASE+'/presence/'+encodeURIComponent(id),{method:'DELETE',headers:{Authorization:'Bearer '+accessToken}});
   if(!r.ok){ const e=await r.json().catch(()=>({})); return alert('Napaka: '+(e.error||r.status)); }
   renderTimeEntries();
+
 }
+
+function computePresenceState(entries, myEmail){
+  // upošteva samo moj današnji dnevnik
+  const mine = (entries||[]).filter(e => e.email === myEmail).sort((a,b)=>a.ts-b.ts);
+  let isIn = false;
+  let onBreak = false;
+  for(const e of mine){
+    if(e.type==='in'){ isIn = true; }
+    else if(e.type==='break-start' && isIn){ onBreak = true; }
+    else if(e.type==='break-end' && isIn){ onBreak = false; }
+    else if(e.type==='out'){ isIn = false; onBreak = false; }
+  }
+  return { isIn, onBreak };
+}
+
+function updatePresenceButtons(entries){
+  const st = me ? computePresenceState(entries, me.email) : {isIn:false, onBreak:false};
+  const bIn  = document.getElementById('clockIn');
+  const bOut = document.getElementById('clockOut');
+  const bBS  = document.getElementById('breakStart');
+  const bBE  = document.getElementById('breakEnd');
+
+  const loggedInUser = !!me;
+
+  if(!loggedInUser){
+    [bIn,bOut,bBS,bBE].forEach(b=>{ if(b){ b.disabled=true; b.classList.add('opacity-50','cursor-not-allowed'); } });
+    return;
+  }
+  if(st.isIn){
+    if(bIn){ bIn.disabled = true; bIn.classList.add('opacity-50','cursor-not-allowed'); }
+    if(bOut){ bOut.disabled = false; bOut.classList.remove('opacity-50','cursor-not-allowed'); }
+    if(bBS){ bBS.disabled = st.onBreak; bBS.classList.toggle('opacity-50', st.onBreak); bBS.classList.toggle('cursor-not-allowed', st.onBreak); }
+    if(bBE){ bBE.disabled = !st.onBreak; bBE.classList.toggle('opacity-50', !st.onBreak); bBE.classList.toggle('cursor-not-allowed', !st.onBreak); }
+  }else{
+    if(bIn){ bIn.disabled = false; bIn.classList.remove('opacity-50','cursor-not-allowed'); }
+    if(bOut){ bOut.disabled = true; bOut.classList.add('opacity-50','cursor-not-allowed'); }
+    if(bBS){ bBS.disabled = true; bBS.classList.add('opacity-50','cursor-not-allowed'); }
+    if(bBE){ bBE.disabled = true; bBE.classList.add('opacity-50','cursor-not-allowed'); }
+  }
+}
+
 
 /* ===== Dnevnik (ONLINE + media) ===== */
 document.getElementById("addMaterialRow")?.addEventListener("click", ()=>{ materials.push({name:'',qty:'',uom:'kos'}); renderMaterials(); });
