@@ -1001,12 +1001,22 @@ async function renderJobLogs(){
   const wrap=document.getElementById('logList'); if(!wrap) return;
   const r=await fetch(API_BASE+'/jobs',{headers:{Authorization:'Bearer '+accessToken}}); const list = r.ok ? await r.json() : [];
   if(!list.length){ wrap.innerHTML='<div class="text-center py-4" style="color:var(--muted)"><i class="fas fa-tasks text-2xl mb-2"></i><p>Ni shranjenih vnosov.</p></div>'; return; }
-  wrap.innerHTML=list.map(j=>`
+
+  const canAdmin = isOwnerOrCeo();
+  wrap.innerHTML=list.map(j=>{
+    const canEdit = canAdmin || j.email === me?.email;
+    const tools = canEdit ? `
+      <div class="flex gap-2 ml-3">
+        <button class="btn btn-outline !py-1 !px-2 text-xs" onclick="editLog('${j.id}')"><i class="fas fa-pen"></i> Uredi</button>
+        <button class="btn btn-danger  !py-1 !px-2 text-xs" onclick="deleteLog('${j.id}')"><i class="fas fa-trash"></i> Briši</button>
+      </div>` : ``;
+
+    return `
     <div class="p-3 rounded-lg" style="border:1px solid var(--border);">
       <div class="flex items-start justify-between">
         <div class="flex-1">
-          <div class="font-medium"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}</div>
-          <div class="mt-1 text-sm">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
+          <div class="font-medium flex items-center"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}${tools}</div>
+          <div class="mt-1 text-sm whitespace-pre-line">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
           ${Array.isArray(j.materials)&&j.materials.length ? `<div class="mt-2 text-xs" style="color:var(--muted)">Materiali: ${j.materials.map(m=>`${m.name} (${m.qty||0} ${m.uom||''})`).join(', ')}</div>`:''}
           ${Array.isArray(j.photos)&&j.photos.length ? `<div class="media-grid mt-2">
             ${j.photos.map(p=> p.mime?.startsWith('video') ? `
@@ -1016,8 +1026,48 @@ async function renderJobLogs(){
         </div>
         <div class="text-xs" style="color:var(--muted)">${dmy(j.ts)}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
+async function deleteLog(id){
+  if(!confirm('Res želiš izbrisati dnevnik?')) return;
+  const r = await fetch(API_BASE+'/jobs/'+encodeURIComponent(id),{
+    method:'DELETE',
+    headers:{Authorization:'Bearer '+accessToken}
+  });
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    return alert('Brisanje ni uspelo: '+(e.error||r.status));
+  }
+  renderJobLogs();
+}
+
+async function editLog(id){
+  // preprosto urejanje: aktivnost + ure (lahko razširimo)
+  const cur = await fetch(API_BASE+'/jobs?'+new URLSearchParams({} ),{headers:{Authorization:'Bearer '+accessToken}})
+    .then(r=>r.ok?r.json():[]).then(list=>list.find(x=>x.id===id));
+  if(!cur) return alert('Dnevnik ni najden.');
+
+  const newActivity = prompt('Uredi aktivnost:', cur.activity || '');
+  if(newActivity===null) return; // cancel
+  const newHoursStr = prompt('Uredi ure (npr. 3.5):', String(cur.hours || 0));
+  if(newHoursStr===null) return;
+  const newHours = parseFloat(newHoursStr||'0');
+
+  const r = await fetch(API_BASE+'/jobs/'+encodeURIComponent(id),{
+    method:'PUT',
+    headers:{'Content-Type':'application/json', Authorization:'Bearer '+accessToken},
+    body: JSON.stringify({ activity: newActivity.trim(), hours: isNaN(newHours)?0:newHours })
+  });
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    return alert('Urejanje ni uspelo: '+(e.error||r.status));
+  }
+  renderJobLogs();
+}
+
+
 
 /* ===== Poročila (placeholder – ohranjeno) ===== */
 function prepareReportFilters(){
