@@ -258,39 +258,51 @@ app.get("/jobs", authRequired, (req, res) => {
 });
 
 app.put("/jobs/:id", authRequired, (req, res) => {
-  const id = req.params.id;
-  const i = jobs.findIndex(j => j.id === id);
-  if(i === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
+  try {
+    const id = req.params.id;
+    const idx = jobs.findIndex(j => j.id === id);
+    if (idx === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
 
-  const j = jobs[i];
-  const admin = isAdmin(req.user);
-  const owner = j.email === req.user.email;
-  if(!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
+    const j = jobs[idx];
+    const admin = isAdmin(req.user);
+    const owner = j.email === req.user.email;
+    if (!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
 
-  const { projectId, activity, hours } = req.body || {};
-  if(typeof projectId === "string" && projectId.trim()) j.projectId = projectId.trim();
-  if(typeof activity === "string") j.activity = activity.trim();
-  if(typeof hours !== "undefined") j.hours = Number(hours || 0);
+    const { projectId, activity, hours, materials: mats, photos } = req.body || {};
+    if (typeof projectId === "string" && projectId.trim()) j.projectId = projectId.trim();
+    if (typeof activity === "string") j.activity = activity.trim();
+    if (typeof hours !== "undefined" && !Number.isNaN(Number(hours))) j.hours = Number(hours);
+    if (Array.isArray(mats)) j.materials = mats;
+    if (Array.isArray(photos)) j.photos = photos;
 
-  // (po želji bi tu lahko dodali tudi update materialov/fotk)
-  saveJobs();
-  res.json(j);
+    saveJobs();
+    res.json(j);
+  } catch (e) {
+    console.error("PUT /jobs/:id error:", e);
+    res.status(500).json({ error: "Napaka pri posodobitvi dnevnika" });
+  }
 });
 
 app.delete("/jobs/:id", authRequired, (req, res) => {
-  const id = req.params.id;
-  const i = jobs.findIndex(j => j.id === id);
-  if(i === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
+  try {
+    const id = req.params.id;
+    const idx = jobs.findIndex(j => j.id === id);
+    if (idx === -1) return res.status(404).json({ error: "Dnevnik ne obstaja" });
 
-  const j = jobs[i];
-  const admin = isAdmin(req.user);
-  const owner = j.email === req.user.email;
-  if(!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
+    const j = jobs[idx];
+    const admin = isAdmin(req.user);
+    const owner = j.email === req.user.email;
+    if (!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
 
-  jobs.splice(i,1);
-  saveJobs();
-  res.status(204).end();
+    jobs.splice(idx, 1);
+    saveJobs();
+    res.status(204).end();
+  } catch (e) {
+    console.error("DELETE /jobs/:id error:", e);
+    res.status(500).json({ error: "Napaka pri brisanju dnevnika" });
+  }
 });
+
 
 
 // ===== upload fotografij =====
