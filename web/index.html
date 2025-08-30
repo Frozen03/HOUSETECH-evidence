@@ -379,9 +379,9 @@ input[type="checkbox"]:hover {
   <div class="plan-filters">
     <div class="text-xs" style="color:var(--muted)">Kategorije:</div>
     <button class="chip active" data-cat="Vse">Vse</button>
-    <button class="chip" data-cat="General">Splošno</button>
-    <button class="chip" data-cat="Elektro">Groba inštalacija</button>
-    <button class="chip" data-cat="Programiranje">Fina inštalacija</button>
+    <button class="chip" data-cat="Splošno">Splošno</button>
+    <button class="chip" data-cat="Groba inštalacija">Groba inštalacija</button>
+    <button class="chip" data-cat="Fina inštalacija">Fina inštalacija</button>
     <button class="chip" data-cat="Programiranje">Programiranje</button>
     <button class="chip" data-cat="Servis">Servis</button>
   </div>
@@ -600,7 +600,7 @@ input[type="checkbox"]:hover {
           <h3 class="font-semibold mb-2">Evidenca prisotnosti (vrstice)</h3>
           <div class="max-h-96 overflow-auto border rounded-lg">
             <table class="tbl">
-              <thead><tr><th>Datum</th>><th>Zaposleni</th><th style="width:80px">Ure</th></tr></thead>
+              <thead><tr><th>Datum</th><th>Zaposleni</th><th style="width:80px">Ure</th></tr></thead>
               <tbody id="tblPresence"></tbody>
             </table>
           </div>
@@ -1338,10 +1338,14 @@ async function renderReports(){
     const rows = rep.presence.rows || [];
     rows.sort((a,b)=> a.date.localeCompare(b.date) || (a.projectId||'').localeCompare(b.projectId||'') || a.email.localeCompare(b.email));
     tp.innerHTML = rows.map(rw=>{
-      const pname = projects.find(p=>p.id===rw.projectId)?.name || '—';
-      const name  = (usersDir[rw.email]?.name) || rw.email;
-      return `<tr><td>${rw.date}</td><td>${name}</td><td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td></tr>`;
-    }).join('') || `<tr><td colspan="4" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
+  const name  = (usersDir[rw.email]?.name) || rw.email;
+  return `<tr>
+    <td>${rw.date}</td>
+    <td>${name}</td>
+    <td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td>
+  </tr>`;
+}).join('') || `<tr><td colspan="4" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
+
   }
 
   // Dnevnik del (vrstice) – ure iz vnosov
@@ -1427,7 +1431,7 @@ const hdr = `<div class="cal-numb">${dayNum}</div><div class="cal-day"> ${weekda
         </div>`;
     }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus" title="Dodaj"></i></button>` : '';
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
@@ -1494,7 +1498,6 @@ function pm_fillPeople(selectedEmails=[]){
 }
 
 /* ---- helperji za razpon datumov ---- */
-function ymd(d){ return d.toISOString().slice(0,10); }
 function parseISO(s){ const d=new Date(s); d.setHours(12,0,0,0); return d; }
 function daysBetweenInclusive(startISO, endISO){
   const out=[];
@@ -1523,7 +1526,6 @@ function openPlanModal(dayKey, idx=null){
 
   document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
   document.getElementById('pmTime').value     = it.time || '';
-  document.getElementById('pmTitle').value    = it.title || '';
   document.getElementById('pmCategory').value = it.category || 'Splošno';
   document.getElementById('pmStatus').value   = it.status || 'V teku';
   document.getElementById('pmNotes').value    = it.note || '';
