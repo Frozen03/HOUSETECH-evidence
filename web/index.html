@@ -948,9 +948,30 @@ function renderProjectsAdmin(){
   const ul=document.getElementById('admProjectList'); if(!ul) return;
   ul.innerHTML=(projects||[]).map(p=>`
     <li class="p-3 rounded-lg flex items-center justify-between" style="border:1px solid var(--border);">
-      <div class="font-medium truncate"><i class="fas fa-folder text-yellow-500 mr-2"></i>${p.name}</div>
-      <button class="btn btn-outline text-xs" onclick="admDelProject('${p.id}')"><i class="fas fa-trash"></i> Izbriši</button>
+      <div class="min-w-0">
+        <div class="font-medium truncate">
+          <i class="fas fa-folder text-yellow-500 mr-2"></i>${p.name}
+          ${p.locked ? '<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Zaklenjen</span>' : ''}
+        </div>
+        ${p.address ? `<div class="text-xs" style="color:var(--muted)">${p.address}</div>` : ''}
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline text-xs" onclick="admToggleLock('${p.id}', ${p.locked? 'false':'true'})">
+          <i class="fas ${p.locked ? 'fa-lock-open' : 'fa-lock'}"></i> ${p.locked ? 'Odkleni' : 'Zakleni'}
+        </button>
+        <button class="btn btn-outline text-xs" onclick="admDelProject('${p.id}')"><i class="fas fa-trash"></i> Izbriši</button>
+      </div>
     </li>`).join('') || `<li class="text-center" style="color:var(--muted)">Ni projektov.</li>`;
+}
+async function admToggleLock(id, toLock){
+  if(!isOwnerOrCeo()) return alert('Samo Owner/CEO');
+  const r=await fetch(API_BASE+'/projects/'+encodeURIComponent(id),{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},
+    body:JSON.stringify({ locked: !!JSON.parse(String(toLock)) })
+  });
+  if(!r.ok) return alert('Napaka pri zaklepanju/odklepanju projekta');
+  await adminReload();
 }
 document.getElementById('admAddProject')?.addEventListener('click', async ()=>{
   if(!isOwnerOrCeo()) return alert('Samo Owner/CEO');
