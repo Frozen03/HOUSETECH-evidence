@@ -120,7 +120,7 @@ body:not(.dark-mode) .logo{
     /* koledar (mesečni plan) */
     .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
     .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
-    .cal-day{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:space-between; }
+    .cal-day{ position:absolute; top:6px; right:8px; font-size:.75rem; font-weight:600; color:var(--muted); display:flex; text-transform: lowercase;  align-items:center; justify-content:space-between; }
     .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
     .cal-locked{ opacity:.6; pointer-events:none; }
 
@@ -282,9 +282,7 @@ input[type="checkbox"]:hover {
     </h2>
 
     <!-- Status v samem auth panelu -->
-    <span id="statusBadge" class="hidden bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">
-      <i class="fas fa-check mr-1"></i>Prijavljen
-    </span>
+    <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
   </div>
 
   <!-- vrstica z informacijami o prijavljenem -->
@@ -1538,29 +1536,31 @@ async function renderWeek(){
   const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
 
   const list = items.map((it, idx) => {
-    const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-    const st   = (it.statuses || {})[me.email] || 'V teku';
+  const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+  const baseStatus = (it.status === 'Opravljeno') ? 'Opravljeno' : 'V teku';
+  const myStatus   = (it.statuses || {})[me.email] || baseStatus; // spoštuj globalno Opravljeno
+  const st         = myStatus;
+  const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
+  const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
+  const locked   = st === 'Opravljeno' ? 'disabled' : '';
 
-    const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
-    const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
-    const locked   = st === 'Opravljeno' ? 'disabled' : '';
+  return `
+    <div class="p-2 border rounded-lg mb-1">
+      <div class="font-medium">${it.title ? it.title : proj}</div>
+      ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
+      <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
+      <div class="mt-2 flex items-center gap-2">
+        <label class="text-xs">Status:</label>
+        <select class="text-xs border rounded px-2 py-1"
+                onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
+          <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
+          <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
+        </select>
+        ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+      </div>
+    </div>`;
+}).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
 
-    return `
-      <div class="p-2 border rounded-lg mb-1">
-        <div class="font-medium">${it.title ? it.title : proj}</div>
-        ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
-        <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-        <div class="mt-2 flex items-center gap-2">
-          <label class="text-xs">Status:</label>
-          <select class="text-xs border rounded px-2 py-1"
-                  onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
-            <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
-            <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
-          </select>
-          ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-        </div>
-      </div>`;
-  }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
 
   return `
     <div class="border rounded-lg p-2">
