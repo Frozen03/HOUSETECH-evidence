@@ -271,13 +271,12 @@ input[type="checkbox"]:hover {
       </div>
       <p class="text-sm" style="color:var(--muted)">Prijava z Google</p>
     </div>
-    <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
   </header>
 
 <!-- PRIJAVA -->
 <div id="authCard" class="card mb-6">
   <div class="flex items-start justify-between">
-    <h2 class="text-lg font-semibold">
+    <h2 id="Prijava" class="text-lg font-semibold">
       <i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava
     </h2>
 
@@ -799,6 +798,7 @@ function showAppAfterLogin(){
   // skrij Google gumb
   document.getElementById('g_id_signin')?.classList.add('hidden');
   document.getElementById('g_id_onload')?.classList.add('hidden');
+  document.getElementById('Prijava')?.classList.remove('hidden');
   // pokaži odjavo in badge v auth kartici
   document.getElementById('signOut')?.classList.remove('hidden');
   document.getElementById('statusBadge')?.classList.remove('hidden');
