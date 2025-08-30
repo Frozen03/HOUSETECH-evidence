@@ -144,16 +144,35 @@ app.delete("/users/:email", authRequired, requireRole(["Owner", "CEO"]), (req, r
 });
 
 // ===== PROJECTS =====
-app.get("/projects", authRequired, (req, res) => res.json(projects));
+app.get("/projects", authRequired, (req, res) => {
+  const isMgr = hasManagerRole(req.user);
+  if (isMgr) return res.json(projects);
+  // zaposleni vidijo le odklenjene
+  return res.json(projects.filter(p => !p.locked));
+});
 
 app.post("/projects", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
   const name = String(req.body?.name || "").trim();
   const address = String(req.body?.address || "").trim();
   if (!name) return res.status(400).json({ error: "Manjka name" });
-  const proj = { id: crypto.randomUUID(), name, address: address || "" };
+  const proj = { id: crypto.randomUUID(), name, address: address || "", locked: false };
   projects.push(proj);
   saveProjects();
   res.status(201).json(proj);
+});
+
+// PATCH za preimenovanje / naslov / zaklep
+app.patch("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
+  const id = req.params.id;
+  const i = projects.findIndex(p => p.id === id);
+  if (i === -1) return res.status(404).json({ error: "Ni projekta" });
+
+  const { name, address, locked } = req.body || {};
+  if (typeof name === "string") projects[i].name = name.trim();
+  if (typeof address === "string") projects[i].address = address.trim();
+  if (typeof locked !== "undefined") projects[i].locked = !!locked;
+  saveProjects();
+  res.json(projects[i]);
 });
 
 app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
@@ -164,6 +183,7 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
   saveProjects();
   res.status(204).end();
 });
+
 
 // ===== MATERIALS =====
 app.get("/materials", authRequired, (req, res) => res.json(materials));
@@ -222,10 +242,148 @@ app.delete("/presence/:id", authRequired, (req, res) => {
   res.status(204).end();
 });
 
+// ===== REPORTS =====
+
+// helper: parsa IN/OUT/break v efektivne ure
+function computePresenceHours(records){
+  // records: vse prisotnosti znotraj časovnega okna (že filtrirane)
+  // vrača { byProject:{[projectId]: hours}, byEmployee:{[email]: hours}, rows:[{date,projectId,email,hours}] }
+  const byKey = {}; // ključ: date|email|projectId -> array of events
+  for(const r of records){
+    const d = new Date(r.ts);
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0,10);
+    const key = `${date}|${r.email}|${r.projectId||''}`;
+    (byKey[key] ||= []).push(r);
+  }
+
+  const byProject = {};
+  const byEmployee = {};
+  const rows = [];
+
+  for(const [key, arr] of Object.entries(byKey)){
+    const [date, email, projectId] = key.split('|');
+    const list = arr.slice().sort((a,b)=>a.ts-b.ts);
+
+    let totalMs = 0;
+    let inAt = null;
+    let breakStart = null;
+    let breakMs = 0;
+
+    for(const ev of list){
+      if (ev.type === 'in'){
+        inAt = ev.ts;
+        breakStart = null; breakMs = 0;
+      } else if (ev.type === 'break-start' && inAt != null){
+        if (breakStart == null) breakStart = ev.ts;
+      } else if (ev.type === 'break-end' && inAt != null && breakStart != null){
+        breakMs += Math.max(0, ev.ts - breakStart);
+        breakStart = null;
+      } else if (ev.type === 'out' && inAt != null){
+        const span = Math.max(0, ev.ts - inAt);
+        const eff = Math.max(0, span - breakMs);
+        totalMs += eff;
+        inAt = null; breakStart = null; breakMs = 0;
+      }
+    }
+
+    const hours = Math.round((totalMs/3600000)*100)/100;
+    if (hours > 0){
+      const pid = projectId || '';
+      byProject[pid] = (byProject[pid] || 0) + hours;
+      byEmployee[email] = (byEmployee[email] || 0) + hours;
+      rows.push({ date, projectId: pid, email, hours });
+    }
+  }
+
+  return { byProject, byEmployee, rows };
+}
+
+app.get("/reports/summary", authRequired, async (req, res) => {
+  try{
+    const from = Number(req.query.from || 0);
+    const to   = Number(req.query.to   || 32503680000000);
+    const projectId = String(req.query.projectId || "");
+    const email     = String(req.query.email || "");
+
+    const isMgr = hasManagerRole(req.user);
+    const myEmail = req.user.email;
+
+    // Presence
+    let pres = presence
+      .filter(p => p.ts >= from && p.ts <= to)
+      .filter(p => !projectId || p.projectId === projectId)
+      .filter(p => !email || p.email === email);
+
+    // Jobs
+    let jlist = jobs
+      .filter(j => j.ts >= from && j.ts <= to)
+      .filter(j => !projectId || j.projectId === projectId)
+      .filter(j => !email || j.email === email);
+
+    // Filtri za zaposlene (zaklenjeni projekti + samo njihove zadeve)
+    if (!isMgr){
+      pres = pres
+        .filter(p => p.email === myEmail)
+        .filter(p => {
+          if (!p.projectId) return true;
+          const pr = projects.find(x => x.id === p.projectId);
+          return !(pr && pr.locked);
+        });
+
+      jlist = jlist
+        .filter(j => j.email === myEmail)
+        .filter(j => {
+          const pr = projects.find(x => x.id === j.projectId);
+          return !(pr && pr.locked);
+        });
+    }
+
+    const presAgg = computePresenceHours(pres);
+
+    // Jobs aggregations
+    const jobsByProject = {};
+    const jobsByEmployee = {};
+    jlist.forEach(j => {
+      jobsByProject[j.projectId] = (jobsByProject[j.projectId] || 0) + Number(j.hours || 0);
+      jobsByEmployee[j.email] = (jobsByEmployee[j.email] || 0) + Number(j.hours || 0);
+    });
+
+    res.json({
+      presence: {
+        byProject: presAgg.byProject,
+        byEmployee: presAgg.byEmployee,
+        rows: presAgg.rows
+      },
+      jobs: {
+        byProject: jobsByProject,
+        byEmployee: jobsByEmployee,
+        rows: jlist.map(j => ({ date: new Date(j.ts).toISOString().slice(0,10), projectId: j.projectId, email: j.email, activity: j.activity, hours: Number(j.hours||0) }))
+      }
+    });
+  }catch(e){
+    console.error("GET /reports/summary error:", e);
+    res.status(500).json({ error: "Napaka pri poročilih" });
+  }
+});
+
+
 // ===== JOBS =====
+function isProjectLocked(projectId){
+  if (!projectId) return false;
+  const p = projects.find(x => x.id === projectId);
+  return !!(p && p.locked);
+}
+
 app.post("/jobs", authRequired, (req, res) => {
   const { projectId, activity, hours, materials: mats, photos } = req.body || {};
   if (!projectId || !activity) return res.status(400).json({ error: "Manjka projectId ali activity" });
+
+  // zaposleni/študent ne sme v zaklenjen projekt
+  const isMgr = hasManagerRole(req.user);
+  if (!isMgr && isProjectLocked(projectId)) {
+    return res.status(403).json({ error: "Projekt je zaklenjen." });
+  }
+
   const email = req.user.email;
   const employee = users[email]?.name || email;
   const item = {
@@ -247,13 +405,27 @@ app.post("/jobs", authRequired, (req, res) => {
 app.get("/jobs", authRequired, (req, res) => {
   const from = Number(req.query.from || 0);
   const to   = Number(req.query.to   || 32503680000000);
-  const email = String(req.query.email || "");
+  const emailQ = String(req.query.email || "");
   const projectId = String(req.query.projectId || "");
-  const list = jobs
+
+  const isMgr = hasManagerRole(req.user);
+  const myEmail = req.user.email;
+
+  let list = jobs
     .filter(j => j.ts >= from && j.ts <= to)
-    .filter(j => !email || j.email === email)
-    .filter(j => !projectId || j.projectId === projectId)
-    .sort((a,b) => b.ts - a.ts);
+    .filter(j => !projectId || j.projectId === projectId);
+
+  // zaposleni: vidijo le svoje in ne-locked projekte
+  if (!isMgr) {
+    list = list
+      .filter(j => j.email === myEmail)
+      .filter(j => !isProjectLocked(j.projectId));
+  } else {
+    // managerji lahko še dodatno filtrirajo po emailu
+    if (emailQ) list = list.filter(j => j.email === emailQ);
+  }
+
+  list = list.sort((a,b) => b.ts - a.ts);
   res.json(list);
 });
 
@@ -269,6 +441,12 @@ app.put("/jobs/:id", authRequired, (req, res) => {
     if (!admin && !owner) return res.status(403).json({ error: "Ni dovoljenja" });
 
     const { projectId, activity, hours, materials: mats, photos } = req.body || {};
+
+    // če ni manager, ne dovoli prestavit v zaklenjen projekt
+    if (!admin && projectId && isProjectLocked(projectId)) {
+      return res.status(403).json({ error: "Projekt je zaklenjen." });
+    }
+
     if (typeof projectId === "string" && projectId.trim()) j.projectId = projectId.trim();
     if (typeof activity === "string") j.activity = activity.trim();
     if (typeof hours !== "undefined" && !Number.isNaN(Number(hours))) j.hours = Number(hours);
@@ -302,6 +480,7 @@ app.delete("/jobs/:id", authRequired, (req, res) => {
     res.status(500).json({ error: "Napaka pri brisanju dnevnika" });
   }
 });
+
 
 
 
