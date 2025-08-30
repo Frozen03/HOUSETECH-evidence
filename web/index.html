@@ -1340,7 +1340,7 @@ async function renderReports(){
     tp.innerHTML = rows.map(rw=>{
       const pname = projects.find(p=>p.id===rw.projectId)?.name || '—';
       const name  = (usersDir[rw.email]?.name) || rw.email;
-      return `<tr><td>${rw.date}</td><td>${pname}</td><td>${name}</td><td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td></tr>`;
+      return `<tr><td>${rw.date}</td><td>${name}</td><td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td></tr>`;
     }).join('') || `<tr><td colspan="4" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
   }
 
