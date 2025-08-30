@@ -274,27 +274,43 @@ input[type="checkbox"]:hover {
     <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
   </header>
 
-  <!-- PRIJAVA -->
-  <div id="authCard" class="card mb-6">
-    <h2 class="text-lg font-semibold mb-3"><i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava</h2>
-    <p class="text-sm mb-4" style="color:var(--muted)">Prijavi se z Google. Strežnik preveri ID token in izda JWT z vlogami (whitelist).</p>
-    <div class="flex items-center gap-3">
-      <!-- Google Identity (deklarativno) -->
-      <div id="g_id_onload"
-           data-client_id="149127907023-ip3jqct2vmqc4tm4jm4bfoogd1pqfpsv.apps.googleusercontent.com"
-           data-callback="handleGoogleCredentialResponse"
-           data-auto_prompt="false"></div>
-      <div class="g_id_signin"
-           data-type="standard"
-           data-size="large"
-           data-shape="rectangular"
-           data-theme="outline"
-           data-text="signin_with"
-           data-logo_alignment="left"></div>
+<!-- PRIJAVA -->
+<div id="authCard" class="card mb-6">
+  <div class="flex items-start justify-between">
+    <h2 class="text-lg font-semibold">
+      <i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava
+    </h2>
 
-      <button id="signOut" class="btn btn-outline hidden"><i class="fas fa-right-from-bracket"></i> Odjava</button>
-    </div>
+    <!-- Status v samem auth panelu -->
+    <span id="statusBadge" class="hidden bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs">
+      <i class="fas fa-check mr-1"></i>Prijavljen
+    </span>
   </div>
+
+  <!-- vrstica z informacijami o prijavljenem -->
+  <p id="authInfo" class="text-sm mb-4" style="color:var(--muted)"></p>
+
+  <div class="flex items-center gap-3">
+    <!-- Google Identity (deklarativno) -->
+    <div id="g_id_onload"
+         data-client_id="149127907023-ip3jqct2vmqc4tm4jm4bfoogd1pqfpsv.apps.googleusercontent.com"
+         data-callback="handleGoogleCredentialResponse"
+         data-auto_prompt="false"></div>
+    <div id="g_id_signin"
+         class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-shape="rectangular"
+         data-theme="outline"
+         data-text="signin_with"
+         data-logo_alignment="left"></div>
+
+    <button id="signOut" class="btn btn-outline hidden">
+      <i class="fas fa-right-from-bracket"></i> Odjava
+    </button>
+  </div>
+</div>
+
 
   <!-- TABS -->
   <nav id="tabsNav" class="mb-6 hidden">
@@ -782,25 +798,49 @@ function applyRoleUI(){
 
 /* ===== UI helperji ===== */
 function showAppAfterLogin(){
+  // skrij Google gumb
   document.getElementById('g_id_signin')?.classList.add('hidden');
+  document.getElementById('g_id_onload')?.classList.add('hidden');
+  // pokaži odjavo in badge v auth kartici
   document.getElementById('signOut')?.classList.remove('hidden');
   document.getElementById('statusBadge')?.classList.remove('hidden');
+
+  // "(Ime prijavljene osebe), (rola)"
+  const rolesStr = (me?.roles || []).join(', ') || 'brez vloge';
+  const nameStr  = me?.name || me?.email || '';
+  const infoEl = document.getElementById('authInfo');
+  if (infoEl){
+    infoEl.textContent = `${nameStr}, ${rolesStr}`;
+  }
+
+  // tabs
   document.getElementById('tabsNav')?.classList.remove('hidden');
+  applyRoleUI();
 
-applyRoleUI();
-
+  // prisotnost
   document.getElementById('presencePanel')?.classList.remove('hidden');
   document.getElementById('todayPanel')?.classList.remove('hidden');
   renderTimeEntries();
 }
+
 function showLoggedOut(){
+  // pokaži Google gumb
   document.getElementById('g_id_signin')?.classList.remove('hidden');
+  document.getElementById('g_id_onload')?.classList.remove('hidden');
+  // skrij odjavo in badge
   document.getElementById('signOut')?.classList.add('hidden');
   document.getElementById('statusBadge')?.classList.add('hidden');
+
+  const infoEl = document.getElementById('authInfo');
+  if (infoEl){
+    infoEl.textContent = ''; // brez opisa
+  }
+
   document.getElementById('tabsNav')?.classList.add('hidden');
   document.getElementById('presencePanel')?.classList.add('hidden');
   document.getElementById('todayPanel')?.classList.add('hidden');
 }
+
 document.getElementById('signOut')?.addEventListener('click', ()=>{
   localStorage.clear(); accessToken=null; me=null; showLoggedOut();
   ["time","plan","jobs","journals","reports","admin"].forEach(t=>document.getElementById("tab-"+t)?.classList.add("hidden"));
