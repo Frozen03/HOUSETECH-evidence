@@ -128,7 +128,8 @@ body:not(.dark-mode) .logo{
     /* koledar (mesečni plan) */
     .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
     .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
-    .cal-day{ top:6px; right:8px; font-size:.75rem; font-weight:600; color:var(--muted); display:flex; text-transform: lowercase;  align-items:center; justify-content:space-between; }
+    .cal-numb{ top:6px; right:8px; font-size:.85rem; font-weight:700; color:var(--muted); display:flex; text-transform: lowercase;  align-items:center; justify-content:space-between; }
+    .cal-day{ top:6px; right:2px; font-size:.75rem; font-weight:600; color:var(--muted); display:flex; text-transform: lowercase;  align-items:center; justify-content:space-between; }
     .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
     .cal-locked{ opacity:.6; pointer-events:none; }
 
@@ -1336,7 +1337,7 @@ if (!inMonth) {
 const items = planMonth.days[key] || [];
 const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
 const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
-const hdr = `<div class="cal-day"><span>${dayNum}, ${weekday}</span></div>`;
+const hdr = `<div><span class="cal-numb">${dayNum}</span><span class="cal-day"> ${weekday}</span></div>`;
 
     const list = items.map((it, idx) => {
       const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
