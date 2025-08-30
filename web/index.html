@@ -1411,7 +1411,11 @@ if (!inMonth) {
 const items = planMonth.days[key] || [];
 const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
 const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
-const hdr = `<div class="cal-numb">${dayNum}</div><div class="cal-day"> ${weekday}</div>`;
+const hdr = `
+  <div class="cal-numb">${dayNum}
+    <div class="cal-day"> ${weekday}
+    </div>
+</div>`;
 
     const list = items.map((it, idx) => {
       const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
@@ -1431,7 +1435,7 @@ const hdr = `<div class="cal-numb">${dayNum}</div><div class="cal-day"> ${weekda
         </div>`;
     }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i><p class="cal-day">dodaj plan</p></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
