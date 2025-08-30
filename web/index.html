@@ -1427,7 +1427,7 @@ const hdr = `<div class="cal-numb">${dayNum}</div><div class="cal-day"> ${weekda
         </div>`;
     }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i></button>` : '';
+    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus" title="Dodaj"></i></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
