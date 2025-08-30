@@ -452,11 +452,6 @@ input[type="checkbox"]:hover {
           <select id="pmProject"></select>
         </div>
 
-        <div class="md:col-span-2">
-          <label class="block text-sm mb-1">Naslov naloge</label>
-          <input id="pmTitle" placeholder="Opis naloge">
-        </div>
-
         <div>
           <label class="block text-sm mb-1">Kategorija</label>
           <select id="pmCategory">
@@ -1312,10 +1307,8 @@ async function renderCalendar(){
 }
 function isItemDone(it){
   if (it.status === 'Opravljeno') return true;
-  const people = Array.isArray(it.people) ? it.people : [];
-  if (!people.length) return false;
   const st = it.statuses || {};
-  return people.every(e => (st[e] || it.status || 'V teku') === 'Opravljeno');
+  return Object.values(st).some(v => v === 'Opravljeno');
 }
 
 function drawCalendar(){
@@ -1346,7 +1339,7 @@ const hdr = `<div><span class="cal-numb">${dayNum}</span><span class="cal-day"> 
 
       return `
         <div class="cal-item ${colorCls}">
-          <div class="font-semibold truncate">${it.title ? it.title : projName}</div>
+          <div class="font-semibold truncate">${projName}</div>
           <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
           ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
           ${isOwnerCeoVodja() ? `
@@ -1445,7 +1438,7 @@ function openPlanModal(dayKey, idx=null){
   document.getElementById('pmDateFrom').value = baseISO;
   document.getElementById('pmDateTo').value   = ""; // prazen = samo en dan
 
-  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', title:'', category:'Splošno', status:'V teku' };
+  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', category:'Splošno', status:'V teku' };
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
@@ -1476,13 +1469,12 @@ function pm_collect(){
 
   const projectId = document.getElementById('pmProject').value;
   const time      = document.getElementById('pmTime').value.trim();
-  const title     = document.getElementById('pmTitle').value.trim();
   const category  = document.getElementById('pmCategory').value;
   const status    = document.getElementById('pmStatus').value;
   const note      = document.getElementById('pmNotes').value.trim();
   const people    = [...document.querySelectorAll('#pmPeople input[type="checkbox"]:checked')].map(x=>x.value);
 
-  const obj = { projectId, people, time, title, category, status, note };
+  const obj = { projectId, people, time, category, status, note };
   if(status === 'Opravljeno'){
     obj.statuses = {}; people.forEach(e => obj.statuses[e] = 'Opravljeno');
   }
@@ -1576,7 +1568,7 @@ async function renderWeek(){
 
   return `
     <div class="p-2 border rounded-lg mb-1">
-      <div class="font-medium">${it.title ? it.title : proj}</div>
+      <div class="font-medium">${proj}</div>
       ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
       <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
       <div class="mt-2 flex items-center gap-2">
