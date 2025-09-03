@@ -18,256 +18,297 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
 
   <style>
-    :root{
-  --primary:#0071bc;        
-  --primary-700:#005a94;    
-  --secondary:#10B981; --danger:#EF4444;
-  --bg:#0071bc;              
-  --card:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
-  --tab-active:#FFFFFF; --tab-inactive:#F3F4F6;
-}
-    .dark-mode{
-      --bg:#0F172A; --card:#111827; --text:#E5E7EB; --muted:#A1A1AA; --border:#1F2937;
-      --tab-active:#111827; --tab-inactive:#1F2937;
-    }
+:root{
+  /* Barvna tema */
+  --primary:#0071bc;
+  --primary-700:#005a94;
+  --secondary:#10B981;
+  --danger:#EF4444;
 
-    body{
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color: var(--text);
-      min-height: 100vh;
-      transition: background .3s, color .3s;
-      background:
-        url("../img/vezjebela.png") center/contain no-repeat fixed,
-        var(--bg);
-      position: relative;
-    }
+  /* Površine & besedilo */
+  --bg:#0071bc;          /* ozadje za light (pod sliko) */
+  --card:#FFFFFF;
+  --text:#111827;
+  --muted:#6B7280;
+  --border:#E5E7EB;
 
-body:not(.dark-mode) #tabsNav{
-  background: rgba(255,255,255,.9);
-  border: 1px solid rgba(0,0,0,.06);
-  border-radius: 14px;
-  padding: .35rem .4rem;
-  backdrop-filter: blur(6px);
-}
+  /* Komponente */
+  --tab-active:#FFFFFF;
+  --tab-inactive:#F3F4F6;
 
-/* outline gumbi na svetlem naj ne bodo preveč “prozorni” */
-body:not(.dark-mode) .btn-outline{
-  background: #ffffff;
-  color:#0f172a;
-  border-color: rgba(0,0,0,.08);
-}
-body:not(.dark-mode) .btn-outline:hover{
-  border-color: rgba(0,0,0,.15);
+  /* Layout */
+  --radius-lg:1rem;
+  --radius-md:.75rem;
+  --space:1.25rem;
+
+  /* Tipografija */
+  --font:Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Efekti */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.06);
+  --shadow-md:0 4px 10px rgba(0,0,0,.08);
+  --ring:0 0 0 3px rgba(0,113,188,.12);
 }
 
-    body.dark-mode{
-      background:
-        linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.95)),
-        url("../img/housetech-dark.png") center/cover no-repeat fixed;
-    }
+.dark-mode{
+  --bg:#0F172A;
+  --card:#111827;
+  --text:#E5E7EB;
+  --muted:#A1A1AA;
+  --border:#1F2937;
+  --tab-active:#111827;
+  --tab-inactive:#1F2937;
+}
 
-    .card{ background: var(--card); border:1px solid var(--border); border-radius:1rem; box-shadow: 0 4px 8px rgba(0,0,0,.05); padding:1.25rem; }
-    .btn{ border-radius:.75rem; padding:.6rem 1.1rem; font-weight:600; display:inline-flex; gap:.5rem; align-items:center; }
-    .btn-primary{ background:var(--primary); color:#fff; } .btn-primary:hover{ background:var(--primary-700); }
-    .btn-outline{ border:1px solid var(--border); color:var(--text); background:transparent; }
-    .btn-danger{ background:var(--danger); color:#fff; }
+/* ====== Osnova ====== */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  font-family: var(--font);
+  color: var(--text);
+  min-height:100vh;
+  background:
+    url("../img/vezjebela.png") center/contain no-repeat fixed,
+    var(--bg);
+  transition: background .3s, color .3s;
+  position:relative;
+}
+body.dark-mode{
+  background:
+    linear-gradient(to bottom, rgba(15,23,42,0.9), rgba(15,23,42,0.95)),
+    url("../img/housetech-dark.png") center/cover no-repeat fixed;
+}
 
+/* ====== Brand ====== */
 .logo{
-  font-weight: 900;
-  /* gradient iz branda – ostane viden preko background-clip */
-  background: linear-gradient(90deg, #0071bc, var(--secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  position: relative;
-  line-height: 1;
+  font-weight:900;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; line-height:1;
 }
-
-/* OSTRO ČRNA OBROBA SAMO V LIGHT NAČINU (primarno) */
-body:not(.dark-mode) .logo{
-  -webkit-text-stroke: 0.3px #000;  /* Chrome, Edge, Safari */
-}
-
-/* Fallback, če -webkit-text-stroke ni podprt (npr. stari brskalniki) */
+body:not(.dark-mode) .logo{ -webkit-text-stroke:.3px #000; }
 @supports not (-webkit-text-stroke: 1px black){
   body:not(.dark-mode) .logo{
     text-shadow:
-      -1px -1px 0 #000,  0  -1px 0 #000,  1px -1px 0 #000,
-      -1px  0   0 #000,                     1px  0   0 #000,
-      -1px  1px 0 #000,  0   1px 0 #000,  1px  1px 0 #000;
+      -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000,
+      -1px 0 0 #000, 1px 0 0 #000,
+      -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000;
   }
 }
 
-.dark-mode .logo{
-  -webkit-text-stroke: 0 transparent;
-  text-shadow: none;
+/* ====== Card, gumbi, inputi ====== */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);
+  padding:var(--space);
 }
 
+.btn{
+  display:inline-flex; align-items:center; gap:.5rem;
+  font-weight:600; border-radius:var(--radius-md);
+  padding:.6rem 1.1rem; min-height:44px; border:1px solid transparent;
+  transition: transform .02s ease-in-out, background .2s, border-color .2s;
+}
+.btn:active{ transform: translateY(1px); }
 
-/* univerzalni center za sekcije na širših ekranih */
-.section-center{
-  max-width: 1100px;
-  margin-left:auto;
-  margin-right:auto;
+.btn-primary{ background:var(--primary); color:#fff; }
+.btn-primary:hover{ background:var(--primary-700); }
+
+.btn-outline{
+  background:#fff; color:var(--text);
+  border:1px solid var(--border);
+}
+body.dark-mode .btn-outline{ background:transparent; }
+
+.btn-danger{ background:var(--danger); color:#fff; }
+
+input, select, textarea{
+  width:100%; min-height:44px;
+  border:1px solid var(--border);
+  background:var(--card); color:var(--text);
+  border-radius:var(--radius-md);
+  padding:.7rem .9rem;
+}
+input:focus, select:focus, textarea:focus{
+  outline:none; border-color:var(--primary); box-shadow:var(--ring);
 }
 
+/* Lep checkbox */
+input[type="checkbox"]{
+  appearance:none; width:18px; height:18px; cursor:pointer;
+  border:2px solid var(--border); border-radius:.35rem; background:var(--card);
+  transition: all .2s ease;
+}
+input[type="checkbox"]:hover{ border-color:var(--primary-700); }
+input[type="checkbox"]:checked{ background:var(--primary); border-color:var(--primary); }
+input[type="checkbox"]:checked::after{
+  content:"✔"; position:absolute; font-size:12px; color:#fff;
+  transform:translate(3px, -1px);
+}
 
-    input, select, textarea{ width:100%; border:1px solid var(--border); background:var(--card); color:var(--text); border-radius:.75rem; padding:.7rem .9rem; }
-    input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+/* ====== Navigacija (tabs) ====== */
+#tabsNav{
+  position:sticky; top:0; z-index:40; padding:.25rem 0;
+  background:rgba(0,0,0,0.02);
+}
+.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
 
-    .tab-btn{ padding:.5rem 1rem; font-weight:600; border:1px solid var(--border); }
-    .tab-active{ background:var(--tab-active); }
-    .tab-inactive{ background:var(--tab-inactive); color:var(--muted); }
-    .tab-btn + .tab-btn{ border-left:none; }
-    .tabs-wrap{ border-radius:1rem; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.tabs-wrap{
+  display:flex; gap:.5rem; justify-content:center;
+  overflow:auto; -webkit-overflow-scrolling:touch; padding:.25rem;
+}
+.tab-btn{
+  padding:.5rem 1rem; font-weight:600; border:1px solid var(--border);
+  border-radius:var(--radius-md); white-space:nowrap;
+}
+.tab-active{ background:var(--tab-active); }
+.tab-inactive{ background:var(--tab-inactive); color:var(--muted); }
 
-    .tbl { width:100%; border-collapse: collapse; }
-    .tbl th,.tbl td { border:1px solid var(--border); padding:.5rem .6rem; font-size:.875rem; }
-    .tbl th { background:var(--tab-inactive); text-align:left; }
+/* ====== Tabele ====== */
+.tbl{ width:100%; border-collapse:collapse; }
+.tbl th,.tbl td{ border:1px solid var(--border); padding:.5rem .6rem; font-size:.875rem; }
+.tbl th{ background:var(--tab-inactive); text-align:left; }
 
-    /* koledar (mesečni plan) */
-    .cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
-    .cal-cell{ border:1px solid var(--border); border-radius:.75rem; padding:.5rem; min-height:130px; background:var(--card); display:flex; flex-direction:column; }
-    .cal-numb{ top:6px; right:8px; font-size:.85rem; font-weight:700; color:var(--muted); display:flex;  align-items:center; justify-content:space-between; }
-    .cal-day{ top:6px; left:8px; font-size:.75rem; font-weight:600; color:var(--muted); display:flex; text-transform: lowercase;  align-items:center; justify-content:space-between; }
-    .cal-item{ border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem; margin-top:.25rem; background:var(--tab-inactive); }
-    .cal-locked{ opacity:.6; pointer-events:none; }
+/* ====== Koledar (mesečni) ====== */
+.cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
+.cal-cell{
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
+  min-height:130px; padding:.5rem; display:flex; flex-direction:column; gap:.25rem;
+}
+.cal-numb{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; justify-content:space-between; }
+.cal-day{ font-size:.75rem; font-weight:600; color:var(--muted); text-transform: lowercase; }
+.cal-locked{ opacity:.6; pointer-events:none; }
 
-/* header koledarja */
+.cal-item{
+  border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem;
+  background:var(--tab-inactive); transition: background .2s, border-color .2s, color .2s;
+}
+.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }
+.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
+.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; }
+.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
+
+/* Koledar header, KPI in filtri */
 .plan-header{ display:flex; gap:.75rem; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 .plan-nav{ display:flex; gap:.5rem; align-items:center; }
 .plan-nav .btn{ padding:.4rem .7rem; }
-#monthLabel{ font-weight:600; font-size:1.05rem; min-width:auto; }
+#monthLabel{ font-weight:600; font-size:1.05rem; }
 
 .plan-kpis{ display:flex; gap:.5rem; align-items:center; }
-.kpi-pill{ border:1px solid var(--border); background:var(--tab-active); border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem; }
+.kpi-pill{
+  border:1px solid var(--border); background:var(--tab-active);
+  border-radius:.75rem; padding:.35rem .6rem; font-weight:700; font-size:.9rem;
+}
 .kpi-pill span{ font-weight:600; color:var(--muted); margin-left:.35rem; }
 
 .plan-filters{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.25rem 0 .5rem; }
-.chip{ border:1px solid var(--border); background:var(--tab-inactive); border-radius:999px; padding:.25rem .6rem; font-size:.8rem; }
+.chip{
+  border:1px solid var(--border); background:var(--tab-inactive);
+  border-radius:999px; padding:.25rem .6rem; font-size:.8rem; cursor:pointer;
+}
 .chip.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
 
+/* ====== Tedenski pogled ====== */
+.week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
 
-/* barve za postavke v koledarju */
-.cal-item{ transition: background .2s, border-color .2s, color .2s; }
-.cal-item.cal-done{ background:#DCFCE7; border-color:#86EFAC; color:#065F46; }     /* zelena */
-.dark-mode .cal-item.cal-done{ background:#052e16; border-color:#14532d; color:#86efac; }
-.cal-item.cal-progress{ background:#FFFBEB; border-color:#FDE68A; color:#713F12; } /* rumena */
-.dark-mode .cal-item.cal-progress{ background:#3a2d00; border-color:#a16207; color:#fde68a; }
-
-    /* tedenski plan */
-    .week-grid{ display:grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap:.5rem; }
-    .media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
-    .media-thumb img, .media-thumb video { width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border); }
-
-/* lepši sticky tabs na mobitelu */
-#tabsNav{ position:sticky; top:0; z-index:40; padding:.25rem 0; background:rgba(0,0,0,0.02); }
-.dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
-.tabs-wrap{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; justify-content: center; gap:.5rem; padding:.25rem; }
-.tab-btn{ border-radius:.75rem; }
-
-/* večji “tap targets” */
-.btn{ min-height:44px; }
-select, input, textarea{ min-height:44px; }
-
-/* Lepši checkbox */
-input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border);
-  border-radius: 0.35rem;
-  background: var(--card);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
+/* ====== Media (slike/video) ====== */
+.media-grid{ display:grid; grid-template-columns: repeat(auto-fill,minmax(120px,1fr)); gap:.5rem; }
+.media-thumb img, .media-thumb video{
+  width:100%; height:100px; object-fit:cover; border-radius:.5rem; border:1px solid var(--border);
 }
 
-input[type="checkbox"]:checked {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-
-input[type="checkbox"]:checked::after {
-  content: "✔";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  font-size: 12px;
+/* ====== Obvestilo o shranjevanju ====== */
+.save-notification{
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-700) 100%);
   color: white;
-  transform: translate(-50%, -50%);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 1000;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 320px;
+  pointer-events: none;
+}
+.save-notification.show{ opacity:1; transform:translateY(0); }
+.save-notification.hide{ opacity:0; transform:translateY(20px); }
+.save-notification::before{
+  content:"✓"; font-size:20px; font-weight:bold;
+  background: rgba(255, 255, 255, 0.2);
+  width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.save-notification.progress::after{
+  content:""; position:absolute; bottom:0; left:0; height:4px;
+  background-color: rgba(255, 255, 255, 0.6);
+  animation: progress 2s linear; border-radius:0 0 12px 12px;
+}
+@keyframes progress{ from{ width:100%; } to{ width:0%; } }
+@keyframes checkmark{
+  0%{ transform:scale(0); opacity:0; }
+  50%{ transform:scale(1.2); opacity:1; }
+  100%{ transform:scale(1); opacity:1; }
+}
+.save-notification.show::before{ animation: checkmark .5s ease-out; }
+
+/* ====== Header auth badge ====== */
+.badge{
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:.2rem .5rem; border-radius:999px; font-size:.75rem; font-weight:600;
 }
 
-input[type="checkbox"]:hover {
-  border-color: var(--primary-700);
-}
+/* ====== Sekcijski center ====== */
+.section-center{ max-width:1100px; margin-inline:auto; }
 
-#pmPeople label{
-  min-height: 44px;
-}
-#pmPeople input[type="checkbox"]{
-  width:18px; height:18px;
-}
-
-
-/* kartice malo več “air” na telefonu */
-@media (max-width:640px){
-  .card{ padding:1rem; border-radius:1rem; }
-  header .text-2xl{ font-size:1.35rem; }
-  #authCard .g_id_signin, #authCard #g_id_onload{ transform:scale(0.95); transform-origin:left; }
-}
-
-
-/* ===== Mobile tweaks for Plan dela ===== */
-@media (max-width: 1024px){
+/* ====== Responsive ====== */
+@media (max-width:1024px){
   .tabs-wrap{ display:flex; overflow:auto; }
-  .tab-btn{ white-space:nowrap; font-size:.9rem; }
-  /* mesečni koledar: 4 stolpci na tablici */
+  .tab-btn{ font-size:.9rem; }
   .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
 }
-
-@media (max-width: 768px){
+@media (max-width:768px){
   h1{ font-size:1.25rem; }
   .card{ padding:1rem; }
-  /* mesečni koledar: 3 stolpci na “velikem” telefonu */
   .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
-  /* tedenski pogled: dva stolpca */
   .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
+@media (max-width:640px){
+  #tabsNav{ background:rgba(0,0,0,0.02); }
+  .dark-mode #tabsNav{ background:rgba(0,0,0,0.25); }
 
-@media (max-width: 640px){
-  .tabs-wrap{
-    overflow: visible;   
-    flex-wrap: wrap;      
-    gap:.35rem;
-  }
-  .tab-btn{
-    flex: 1 1 calc(50% - .35rem);
-    text-align:center;
-  }
+  .tabs-wrap{ overflow:visible; flex-wrap:wrap; gap:.35rem; }
+  .tab-btn{ flex:1 1 calc(50% - .35rem); text-align:center; }
 
-  /* mesečni koledar: 2 stolpca na telefonu */
   .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
   .cal-cell{ min-height:150px; }
 
-  /* tedenski pogled: 1 stolpec – po dnevu pod seboj */
   .week-grid{ grid-template-columns: 1fr; }
-  /* status select ne prekriva drugih elementov */
   .week-grid .p-2 .mt-2{ flex-wrap:wrap; }
   .week-grid .p-2 select{ width:100%; }
   .week-grid .p-2 .font-medium{ font-size:.95rem; }
   .week-grid .p-2 .text-xs{ font-size:.8rem; }
   #weekLabel{ min-width:0; font-size:.95rem; }
-}
 
-/* na mobitelu naj vse lepo prelomi */
-@media (max-width:640px){
   .plan-header{ align-items:flex-start; }
   .plan-kpis{ width:100%; justify-content:flex-start; }
+
+  .save-notification{ bottom:80px; right:10px; left:10px; max-width:none; }
 }
-    
+
+/* ====== Prefers-reduced-motion ====== */
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}  
   </style>
 </head>
 <body>
@@ -1265,7 +1306,14 @@ async function editLog(id){
   }
 }
 
-
+function showSaveNotification(msg="Dnevnik uspešno shranjen") {
+  const n = document.getElementById("saveNotification");
+  if (!n) return;
+  n.textContent = msg;
+  n.classList.add("show", "progress");
+  setTimeout(()=> n.classList.remove("show"), 2000);
+  setTimeout(()=> n.classList.remove("progress"), 2500);
+}
 
 
 /* ===== Poročila (placeholder – ohranjeno) ===== */
