@@ -253,6 +253,14 @@ input[type="checkbox"]:checked::after{
   background-color: rgba(255, 255, 255, 0.6);
   animation: progress 2s linear; border-radius:0 0 12px 12px;
 }
+
+.save-notification.error{
+  background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%);
+}
+.save-notification.error::before{
+  content:"✕";
+}
+
 @keyframes progress{ from{ width:100%; } to{ width:0%; } }
 @keyframes checkmark{
   0%{ transform:scale(0); opacity:0; }
@@ -312,6 +320,8 @@ input[type="checkbox"]:checked::after{
   </style>
 </head>
 <body>
+<!-- Toast obvestilo o shranjevanju -->
+<div id="saveNotification" class="save-notification" role="status" aria-live="polite"></div>
 <div class="max-w-6xl mx-auto py-6 px-4">
   <header class="flex items-start justify-between mb-6">
     <div>
@@ -1224,7 +1234,7 @@ function resetLogForm(){
 
 // klik na Shrani/Posodobi
 document.getElementById("addLog")?.addEventListener("click", async ()=>{
-  if (!me) return alert("Najprej se prijavi.");
+  if (!me) return showSaveNotification('Shranjevanje NI uspelo. (' + (e.error||res.status) + ')', false);
 
   const pid = document.getElementById("logProject").value;
   const activity = document.getElementById("logActivity").value.trim();
@@ -1267,7 +1277,7 @@ document.getElementById("addLog")?.addEventListener("click", async ()=>{
   // reset UI
   resetLogForm();
   renderJobLogs();
-  showSaveNotification("Dnevnik uspešno shranjen!");
+  showSaveNotification("Dnevnik uspešno shranjen!", true);
 });
 
 // klik na Prekliči urejanje
@@ -1307,14 +1317,18 @@ async function editLog(id){
   }
 }
 
-function showSaveNotification(msg="Dnevnik uspešno shranjen") {
+function showSaveNotification(msg="Dnevnik uspešno shranjen!", ok=true) {
   const n = document.getElementById("saveNotification");
   if (!n) return;
   n.textContent = msg;
-  n.classList.add("show", "progress");
-  setTimeout(()=> n.classList.remove("show"), 2000);
-  setTimeout(()=> n.classList.remove("progress"), 2500);
+  n.classList.remove("hide");
+  n.classList.toggle("error", !ok);   // rdeča pri napaki
+  n.classList.add("show","progress");
+  // samodejni hide
+  setTimeout(()=> n.classList.remove("show"), 2200);
+  setTimeout(()=> n.classList.remove("progress"), 2600);
 }
+
 
 
 /* ===== Poročila (placeholder – ohranjeno) ===== */
