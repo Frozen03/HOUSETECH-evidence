@@ -374,6 +374,26 @@ function isProjectLocked(projectId){
   return !!(p && p.locked);
 }
 
+function upsertMaterialsFromLogs(mats){
+  if (!Array.isArray(mats)) return;
+  let changed = false;
+  mats.forEach(m=>{
+    const name = String(m?.name||"").trim();
+    if (!name) return;
+    const uom  = String(m?.uom||"kos").trim() || "kos";
+    const hit = materials.find(x => (x.name||"").toLowerCase() === name.toLowerCase());
+    if (hit){
+      // če je uom nov, ga posodobi (ne rušimo ID)
+      if (uom && uom !== hit.uom){ hit.uom = uom; changed = true; }
+    }else{
+      materials.push({ id: crypto.randomUUID(), name, uom });
+      changed = true;
+    }
+  });
+  if (changed) saveMaterials();
+}
+
+
 app.post("/jobs", authRequired, (req, res) => {
   const { projectId, activity, hours, materials: mats, photos } = req.body || {};
   if (!projectId || !activity) return res.status(400).json({ error: "Manjka projectId ali activity" });
@@ -399,6 +419,7 @@ app.post("/jobs", authRequired, (req, res) => {
   };
   jobs.push(item);
   saveJobs();
+  upsertMaterialsFromLogs(item.materials);
   res.status(201).json(item);
 });
 
@@ -454,6 +475,7 @@ app.put("/jobs/:id", authRequired, (req, res) => {
     if (Array.isArray(photos)) j.photos = photos;
 
     saveJobs();
+    upsertMaterialsFromLogs(j.materials);
     res.json(j);
   } catch (e) {
     console.error("PUT /jobs/:id error:", e);
