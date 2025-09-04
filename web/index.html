@@ -1483,23 +1483,34 @@ const hdr = `
     </div>
 </div>`;
 
-    const list = items.map((it, idx) => {
-      const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
-      const projName    = projects.find(p => p.id === it.projectId)?.name || '—';
-      const colorCls    = isItemDone(it) ? 'cal-done' : 'cal-progress';
+   const list = items.map((it, idx) => {
+  const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+  const projName = projects.find(p => p.id === it.projectId)?.name || '—';
+  const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
-      return `
-        <div class="cal-item ${colorCls}">
-          <div class="font-semibold truncate">${projName}</div>
-          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-          ${isOwnerCeoVodja() ? `
-            <div class="flex justify-end gap-1 mt-1">
-              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-            </div>` : ''}
-        </div>`;
-    }).join('');
+  const { done, pending } = splitPeopleByStatus(it);
+  const statusLine = (it.people && it.people.length)
+    ? `
+      <div class="mt-1 text-[11px]">
+        ${done.length ? `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 mr-1"><i class="fas fa-check mr-1"></i>${done.join(', ')}</span>` : ''}
+        ${pending.length ? `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40"><i class="far fa-circle mr-1"></i>${pending.join(', ')}</span>` : ''}
+      </div>`
+    : '';
+
+  return `
+    <div class="cal-item ${colorCls}">
+      <div class="font-semibold truncate">${projName}</div>
+      <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+      ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+      ${statusLine}
+      ${(!past && isOwnerCeoVodja()) ? `
+        <div class="flex justify-end gap-1 mt-1">
+          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+        </div>` : ''
+      }
+    </div>`;
+}).join('');
 
     const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i><p class="cal-day">dodaj plan</p></button>` : '';
     const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
@@ -1708,12 +1719,12 @@ async function renderWeek(){
 
   const list = items.map((it, idx) => {
   const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-  const baseStatus = (it.status === 'Opravljeno') ? 'Opravljeno' : 'V teku';
-  const myStatus   = (it.statuses || {})[me.email] || baseStatus; // spoštuj globalno Opravljeno
+  const myStatus = (it.statuses || {})[me.email] || 'V teku';
   const st         = myStatus;
   const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
   const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
-  const locked   = st === 'Opravljeno' ? 'disabled' : '';
+  const locked = myStatus === 'Opravljeno' ? 'disabled' : '';
+
 
   return `
     <div class="p-2 border rounded-lg mb-1">
@@ -1759,6 +1770,24 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
   // takoj osvežimo, da se select zaklene
   await renderWeek();
 };
+
+function todayYMD(){
+  const d = new Date(); d.setHours(0,0,0,0);
+  const z = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return z.toISOString().slice(0,10);
+}
+function isPastDayKey(key){ return key < todayYMD(); }
+
+// Seznam imen po statusu iz plan postavke
+function splitPeopleByStatus(it){
+  const done = [], pending = [];
+  const st = it.statuses || {};
+  (it.people || []).forEach(email=>{
+    const nm = (usersDir[email]?.name || email);
+    if (st[email] === 'Opravljeno') done.push(nm); else pending.push(nm);
+  });
+  return { done, pending };
+}
 
 /* ===== DNEVNIKI (manager) ===== */
 function setDefaultDates(idFrom, idTo){
