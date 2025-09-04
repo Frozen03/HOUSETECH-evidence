@@ -590,8 +590,15 @@ input[type="checkbox"]:checked::after{
             <textarea id="qjActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
           </div>
           <div class="md:col-span-1">
-            <label class="block text-sm font-medium mb-1">Ure</label>
-            <input id="qjHours" type="number" step="0.25" placeholder="npr. 8" />
+  <label class="block text-sm font-medium mb-1">Čas</label>
+          <div class="grid grid-cols-2 gap-2">
+             <input id="qjTimeFrom" type="time" step="300" inputmode="numeric"
+               onfocus="this.showPicker && this.showPicker()" />
+             <input id="qjTimeTo"   type="time" step="300" inputmode="numeric"
+               onfocus="this.showPicker && this.showPicker()" />
+          </div>
+          <div class="text-xs mt-1" style="color:var(--muted)">Samodejno: <b id="qjHoursView">0</b> h</div>
+            <input id="qjHours" type="hidden" />
           </div>
         </div>
 
@@ -638,6 +645,17 @@ input[type="checkbox"]:checked::after{
               <textarea id="logActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
             </div>
             <div class="md:col-span-1">
+  <label class="block text-sm font-medium mb-1">Čas</label>
+  <div class="grid grid-cols-2 gap-2">
+    <input id="logTimeFrom" type="time" step="300" inputmode="numeric"
+           onfocus="this.showPicker && this.showPicker()" />
+    <input id="logTimeTo"   type="time" step="300" inputmode="numeric"
+           onfocus="this.showPicker && this.showPicker()" />
+  </div>
+  <div class="text-xs mt-1" style="color:var(--muted)">Samodejno: <b id="logHoursView">0</b> h</div>
+  <input id="logHours" type="hidden" />
+</div>
+
               <label class="block text-sm font-medium mb-1">Ure</label>
               <input id="logHours" type="number" step="0.25" placeholder="npr. 8" />
             </div>
@@ -1139,6 +1157,30 @@ function renderMaterials(){
       <button type="button" class="md:col-span-1 btn btn-outline !py-2 !px-3" onclick="materials.splice(${idx},1); renderMaterials();"><i class="fas fa-times"></i></button>
     </div>`).join('');
 }
+
+(function initLogTimeCalc(){
+  const tf = document.getElementById('logTimeFrom');
+  const tt = document.getElementById('logTimeTo');
+  const hv = document.getElementById('logHoursView');
+  const hh = document.getElementById('logHours');
+
+  // če česarkoli ni ali ni definirane funkcije, nehaj
+  if (!tf || !tt || !hv || !hh || typeof diffHoursRounded !== 'function') return;
+
+  const recalc = () => {
+    const h = diffHoursRounded(tf.value, tt.value);   // vrne 0.25-korak
+    hv.textContent = (Math.round(h*100)/100).toString().replace(/\.00$/, '');
+    hh.value = String(h);                              // skriti numerični value
+  };
+
+  ['input','change'].forEach(ev => {
+    tf.addEventListener(ev, recalc);
+    tt.addEventListener(ev, recalc);
+  });
+
+  recalc(); // initial render
+})();
+
 window.onMatNameInput=(idx,val)=>{ materials[idx].name=val; const info=materialsCatalog[val]; if(info && info.uom){ materials[idx].uom=info.uom; renderMaterials(); } };
 
 /* ===== Prisotnost (ONLINE) ===== */
@@ -1311,6 +1353,22 @@ function qjOpen(projectId, activity){
   document.body.classList.add('overflow-hidden');
 }
 
+const tf = document.getElementById('qjTimeFrom');
+const tt = document.getElementById('qjTimeTo');
+const hv = document.getElementById('qjHoursView');
+const hh = document.getElementById('qjHours');
+tf.value = ''; tt.value = ''; hv.textContent = '0'; hh.value = '0';
+
+function qjRecalc(){
+  const h = diffHoursRounded(tf.value, tt.value);
+  hv.textContent = h.toFixed(2).replace('.00','');
+  hh.value = String(h);
+}
+['input','change'].forEach(ev=>{
+  tf.addEventListener(ev, qjRecalc);
+  tt.addEventListener(ev, qjRecalc);
+});
+
 function qjClose(){
   document.getElementById('qjModal').classList.add('hidden');
   document.body.classList.remove('overflow-hidden');
@@ -1361,6 +1419,7 @@ async function qjSave(){
     const pid = document.getElementById('qjProject').value;
     const activity = (document.getElementById('qjActivity').value||'').trim();
     const hours = parseFloat(document.getElementById('qjHours').value||'0');
+    if(hours<=0){ return alert('Nastavi čas od–do (ure morajo biti > 0).'); }
     if(!pid || !activity) return alert('Vnesi projekt in aktivnost.');
 
     // materials filter (kot na glavni formi)
@@ -1406,6 +1465,22 @@ let editingLogId = null;           // null => dodajanje, string => urejanje
 let editingPhotos = [];            // obstoječe fotke iz vnosa (če urejamo)
 
 // helper: reset obrazca v “dodajanje”
+function parseHM(hm){ // "HH:MM" -> minute
+  if(!hm) return null;
+  const m = hm.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return null;
+  return (+m[1])*60 + (+m[2]);
+}
+function diffHoursRounded(hmFrom, hmTo){
+  const a = parseHM(hmFrom), b = parseHM(hmTo);
+  if(a==null || b==null) return 0;
+  let mins = b - a;
+  if(mins < 0) mins += 24*60;            // prehod čez polnoč
+  const hrs = mins / 60;
+  return Math.round(hrs*4)/4;            // zaokroži na 0,25h
+}
+
+
 function resetLogForm(){
   editingLogId = null;
   editingPhotos = [];
@@ -1428,7 +1503,9 @@ document.getElementById("addLog")?.addEventListener("click", async ()=>{
   const pid = document.getElementById("logProject").value;
   const activity = document.getElementById("logActivity").value.trim();
   const hours = parseFloat(document.getElementById("logHours").value || "0");
-  if (!pid || !activity) return alert("Izpolni: projekt in aktivnost (ure po želji).");
+  if (!pid || !activity) return alert("Izpolni: projekt in aktivnost.");
+  if(hours <= 0){ return alert("Nastavi čas od–do (ure morajo biti > 0)."); }
+
 
   const mats = (materials || []).filter(m => (m.name && m.name.trim()) || parseFloat(m.qty || "0") > 0);
 
