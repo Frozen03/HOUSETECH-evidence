@@ -585,11 +585,7 @@ input[type="checkbox"]:checked::after{
             <label class="block text-sm font-medium mb-1">Projekt</label>
             <select id="qjProject"></select>
           </div>
-          <div class="md:col-span-3">
-            <label class="block text-sm font-medium mb-1">Aktivnost</label>
-            <textarea id="qjActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
-          </div>
-          <div class="md:col-span-1">
+<div class="md:col-span-3">
   <label class="block text-sm font-medium mb-1">Čas</label>
           <div class="grid grid-cols-2 gap-2">
              <input id="qjTimeFrom" type="time" step="300" inputmode="numeric"
@@ -601,6 +597,10 @@ input[type="checkbox"]:checked::after{
             <input id="qjHours" type="hidden" />
           </div>
         </div>
+          <div class="md:col-span-6">
+            <label class="block text-sm font-medium mb-1">Aktivnost</label>
+            <textarea id="qjActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
+          </div>
 
         <div>
           <label class="block text-sm font-medium mb-1">Materiali</label>
@@ -636,15 +636,11 @@ input[type="checkbox"]:checked::after{
         <h2 class="text-lg font-semibold mb-3"><i class="fas fa-tasks mr-2 text-blue-500"></i>Dnevnik del</h2>
         <div class="space-y-3">
          <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
-            <div class="md:col-span-2">
+            <div class="md:col-span-3">
             <label class="block text-sm font-medium mb-1">Projekt</label>
             <select id="logProject"></select>
           </div>
-            <div class="md:col-span-3">
-              <label class="block text-sm font-medium mb-1">Aktivnost</label>
-              <textarea id="logActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
-            </div>
-            <div class="md:col-span-1">
+           <div class="md:col-span-3">
   <label class="block text-sm font-medium mb-1">Čas</label>
   <div class="grid grid-cols-2 gap-2">
     <input id="logTimeFrom" type="time" step="300" inputmode="numeric"
@@ -657,6 +653,10 @@ input[type="checkbox"]:checked::after{
 </div>
             </div>
           </div>
+            <div class="md:col-span-6">
+              <label class="block text-sm font-medium mb-1">Aktivnost</label>
+              <textarea id="logActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
+            </div>
 
           <div>
             <label class="block text-sm font-medium mb-1">Materiali</label>
