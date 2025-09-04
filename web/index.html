@@ -1662,17 +1662,21 @@ const hdr = `
   const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
   const { done, pending } = splitPeopleByStatus(it);
-  let statusLine = '';
-  if ((done.length + pending.length) > 0) {
 
-statusLine = `
-    <div class="mt-1 text-[11px]">
-      ${done.length ? `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 mr-1">
-        <i class="fas fa-check mr-1"></i>${doneTxt}
-      </span>` : ''}
-      ${pending.length ? `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40">
-        <i class="far fa-circle mr-1"></i>${pendingTxt}
-      </span>` : ''}
+// majhni "čipi" z ikono + imeni
+let statusLine = '';
+if ((done.length + pending.length) > 0) {
+  statusLine = `
+    <div class="mt-1 text-[11px] space-x-1">
+      ${done.length ? `
+        <span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40">
+          <i class="fas fa-check mr-1"></i>${done.join(', ')}
+        </span>` : ''}
+
+      ${pending.length ? `
+        <span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40">
+          <i class="far fa-circle mr-1"></i>${pending.join(', ')}
+        </span>` : ''}
     </div>`;
 }
 
@@ -1889,68 +1893,77 @@ function weekRange(d){ // vrne pon..sob
   return days;
 }
 async function renderWeek(){
-  await loadPlanMonth(); // mesečni paket (dovolj za teden)
+  await loadPlanMonth();
   const days = weekRange(weekRef);
   document.getElementById('weekLabel').textContent =
     `${days[0].toLocaleDateString('sl-SI')} – ${days[5].toLocaleDateString('sl-SI')}`;
+
   const wg = document.getElementById('weekGrid');
   wg.innerHTML = days.map(d => {
-  const key   = ymd(d);
-  const items = (planMonth.days[key] || []).filter(it => (it.people || []).includes(me.email));
-
-  const list = items.map((it, idx) => {
-  const proj = projects.find(p => p.id === it.projectId)?.name || '—';
-  const myStatus = (it.statuses || {})[me.email] || 'V teku';
-  const st         = myStatus;
-  const teamArr  = (it.people || []).filter(e => e && e !== me.email).map(e => usersDir[e]?.name || e);
-  const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
-  const locked = myStatus === 'Opravljeno' ? 'disabled' : '';
+    const key = ymd(d);
 
 
-  return `
-    <div class="p-2 border rounded-lg mb-1">
-      <div class="font-medium">${proj}</div>
-      ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
-      <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
-      <div class="mt-2 flex items-center gap-2">
-        <label class="text-xs">Status:</label>
-        <select class="text-xs border rounded px-2 py-1"
-                onchange="updatePersonalStatus('${key}', ${idx}, this.value)" ${locked}>
-          <option value="V teku" ${st === 'V teku' ? 'selected' : ''}>V teku</option>
-          <option value="Opravljeno" ${st === 'Opravljeno' ? 'selected' : ''}>Opravljeno</option>
-        </select>
-        ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
-      </div>
-    </div>`;
-}).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
+    const dayItems = planMonth.days[key] || [];
+    const mine = [];
+    dayItems.forEach((it, originalIdx) => {
+      if ((it.people || []).includes(me.email)) {
+        mine.push({ it, originalIdx });
+      }
+    });
 
+    const list = mine.map(({ it, originalIdx }) => {
+      const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+      const myStatus = (it.statuses || {})[me.email] || 'V teku';
+      const teamArr = (it.people || []).filter(e => e && e !== me.email)
+                        .map(e => usersDir[e]?.name || e);
+      const teamLine = teamArr.length ? `Ekipa: ${teamArr.join(', ')}` : `Ekipa: — (samo ti)`;
+      const locked = myStatus === 'Opravljeno' ? 'disabled' : '';
 
-  return `
-    <div class="border rounded-lg p-2">
-      <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
-      ${list}
-    </div>`;
-}).join('');
+      return `
+        <div class="p-2 border rounded-lg mb-1">
+          <div class="font-medium">${proj}</div>
+          ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
+          <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
+          <div class="mt-2 flex items-center gap-2">
+            <label class="text-xs">Status:</label>
+            <select class="text-xs border rounded px-2 py-1"
+                    onchange="updatePersonalStatus('${key}', ${originalIdx}, this.value)" ${locked}>
+              <option value="V teku" ${myStatus==='V teku'?'selected':''}>V teku</option>
+              <option value="Opravljeno" ${myStatus==='Opravljeno'?'selected':''}>Opravljeno</option>
+            </select>
+            ${locked ? '<i class="fas fa-lock text-xs" title="Opravljeno – zaklenjeno"></i>' : ''}
+          </div>
+        </div>`;
+    }).join('') || `<div class="text-xs italic" style="color:var(--muted)">Ni planirano</div>`;
+
+    return `
+      <div class="border rounded-lg p-2">
+        <div class="font-semibold mb-1">${d.toLocaleDateString('sl-SI',{weekday:'short', day:'2-digit', month:'2-digit'})}</div>
+        ${list}
+      </div>`;
+  }).join('');
 
   document.getElementById('weekPrev').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()-7); await renderWeek(); };
   document.getElementById('weekNext').onclick = async ()=>{ weekRef.setDate(weekRef.getDate()+7); await renderWeek(); };
 }
+
+
 window.updatePersonalStatus = async (dayKey, idx, val)=>{
   (planMonth.days[dayKey] ||= []);
   const it = planMonth.days[dayKey][idx]; if(!it) return;
+
   it.statuses ||= {};
-  const cur = it.statuses[me.email] || 'V teku';
   if (val === 'Opravljeno'){
-  const projId = (me && me.projectId) ? me.projectId : (it.projectId || '');
-  const planDesc = (it.note || me?.activity || it.category || '').trim();
-  const timeStr = (it.time || '').trim();
-  const activity = `[Plan] ${planDesc}${timeStr ? ' • '+timeStr : ''}`.trim();
-  // PREJ: openJobModal(...)
-  qjOpen(projId, activity);   // <-- odpri NOV modal z istim obrazcem
-}
+    // pravilni projekt in predizpolnjen opis + čas iz plana
+    const projId   = it.projectId || '';
+    const planDesc = (it.note || it.category || '').trim();
+    const timeStr  = (it.time || '').trim();
+    const activity = `[Plan] ${planDesc}${timeStr ? ' • '+timeStr : ''}`.trim();
+
+    qjOpen(projId, activity);
+  }
   it.statuses[me.email] = val;
   await savePlanMonth();
-  // takoj osvežimo, da se select zaklene
   await renderWeek();
 };
 
