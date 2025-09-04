@@ -1477,7 +1477,7 @@ function diffHoursRounded(hmFrom, hmTo){
   let mins = b - a;
   if(mins < 0) mins += 24*60;            // prehod čez polnoč
   const hrs = mins / 60;
-  return Math.round(hrs*4)/4;            // zaokroži na 0,25h
+  return Math.round(hrs*2)/2;            // zaokroži na 0,25h
 }
 
 
