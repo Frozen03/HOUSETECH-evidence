@@ -1662,27 +1662,33 @@ const hdr = `
   const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
   const { done, pending } = splitPeopleByStatus(it);
-  const statusLine = (it.people && it.people.length)
-    ? `
-      <div class="mt-1 text-[11px]">
-        ${done.length ? `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 mr-1"><i class="fas fa-check mr-1"></i>${done.join(', ')}</span>` : ''}
-        ${pending.length ? `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40"><i class="far fa-circle mr-1"></i>${pending.join(', ')}</span>` : ''}
-      </div>`
-    : '';
+  let statusLine = '';
+  if ((done.length + pending.length) > 0) {
+
+statusLine = `
+    <div class="mt-1 text-[11px]">
+      ${done.length ? `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 mr-1">
+        <i class="fas fa-check mr-1"></i>${doneTxt}
+      </span>` : ''}
+      ${pending.length ? `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40">
+        <i class="far fa-circle mr-1"></i>${pendingTxt}
+      </span>` : ''}
+    </div>`;
+}
 
   return `
-    <div class="cal-item ${colorCls}">
-      <div class="font-semibold truncate">${projName}</div>
-      <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-      ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-      ${statusLine}
-      ${(!past && isOwnerCeoVodja()) ? `
-        <div class="flex justify-end gap-1 mt-1">
-          <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-          <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-        </div>` : ''
-      }
-    </div>`;
+  <div class="cal-item ${colorCls}">
+    <div class="font-semibold truncate">${projName}</div>
+    <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+    ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+    ${statusLine}
+    ${isOwnerCeoVodja() ? `
+      <div class="flex justify-end gap-1 mt-1">
+        <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+      </div>` : ''
+    }
+  </div>`;
 }).join('');
 
     const addBtn = (isOwnerCeoVodja() && inMonth && !past)
