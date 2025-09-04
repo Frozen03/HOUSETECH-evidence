@@ -1661,22 +1661,20 @@ const hdr = `
   const projName = projects.find(p => p.id === it.projectId)?.name || '—';
   const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
 
-  const { done, pending } = splitPeopleByStatus(it);
+const { done, pending } = splitPeopleByStatus(it);
 
-// majhni "čipi" z ikono + imeni
 let statusLine = '';
 if ((done.length + pending.length) > 0) {
   statusLine = `
-    <div class="mt-1 text-[11px] space-x-1">
-      ${done.length ? `
-        <span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40">
-          <i class="fas fa-check mr-1"></i>${done.join(', ')}
-        </span>` : ''}
-
-      ${pending.length ? `
-        <span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40">
-          <i class="far fa-circle mr-1"></i>${pending.join(', ')}
-        </span>` : ''}
+    <div class="mt-1 text-[11px] flex flex-col gap-1">
+      ${done.map(nm => `
+        <span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 w-fit">
+          <i class="fas fa-check mr-1"></i>${nm}
+        </span>`).join('')}
+      ${pending.map(nm => `
+        <span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40 w-fit">
+          <i class="far fa-circle mr-1"></i>${nm}
+        </span>`).join('')}
     </div>`;
 }
 
