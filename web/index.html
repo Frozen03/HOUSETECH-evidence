@@ -548,6 +548,64 @@ input[type="checkbox"]:checked::after{
   </div>
 </div>
 
+<!-- ================= QUICK DNEVNIK DEL (MODAL) ================= -->
+<div id="qjModal" class="fixed inset-0 z-[120] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" aria-label="Zapri" onclick="qjClose()"></button>
+
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-3xl card relative rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+
+      <!-- Close -->
+      <button type="button" class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="qjClose()">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <h3 class="text-lg font-semibold mb-3 sticky top-0 pt-2 pb-2" style="background:var(--card); z-index:1;">
+        <i class="fas fa-clipboard-check mr-2 text-blue-500"></i>Dnevnik del
+      </h3>
+
+      <!-- ISTI UI kot na zavihku Dnevnik del -->
+      <div class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium mb-1">Projekt</label>
+            <select id="qjProject"></select>
+          </div>
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium mb-1">Aktivnost</label>
+            <textarea id="qjActivity" rows="2" placeholder="Opis vseh del: npr. Montaža stikal …"></textarea>
+          </div>
+          <div class="md:col-span-1">
+            <label class="block text-sm font-medium mb-1">Ure</label>
+            <input id="qjHours" type="number" step="0.25" placeholder="npr. 8" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">Materiali</label>
+          <div id="qjMaterialsList" class="space-y-2"></div>
+          <!-- uporabljamo isti datalist katalog -->
+          <button id="qjAddMaterialRow" type="button" class="btn btn-outline mt-2">
+            <i class="fas fa-plus"></i> Dodaj material
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-1">Fotografije / Video</label>
+          <input id="qjMedia" type="file" multiple accept="image/*,video/*" />
+        </div>
+
+        <div class="flex justify-end gap-2">
+          <button class="btn btn-outline" onclick="qjClose()"><i class="fas fa-ban mr-1"></i> Prekliči</button>
+          <button class="btn btn-primary" onclick="qjSave()"><i class="fas fa-save mr-1"></i> Shrani vnos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- =============== /QUICK DNEVNIK DEL (MODAL) ================== -->
+
+
 
   <!-- ===== Dnevnik del (vnos) ===== -->
   <section id="tab-jobs" class="hidden section-center">
@@ -1215,6 +1273,120 @@ async function deleteLog(id){
   renderJobLogs();
 }
 
+  
+// ===== Quick Journal (modal) =====
+let qjMaterials = [];
+let qjPrefill = { projectId: null, activity: '' };
+
+function qjOpen(projectId, activity){
+  // napolni projekte kot na glavni formi
+  const sel = document.getElementById('qjProject');
+  sel.innerHTML = projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  sel.value = projectId || projects[0]?.id || '';
+
+  document.getElementById('qjActivity').value = activity || '';
+  document.getElementById('qjHours').value = '';
+
+  qjMaterials = [{name:'',qty:'',uom:'kos'}];
+  qjRenderMaterials();
+
+  document.getElementById('qjMedia').value = "";
+  qjPrefill = { projectId: sel.value, activity: document.getElementById('qjActivity').value };
+
+  document.getElementById('qjModal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+
+function qjClose(){
+  document.getElementById('qjModal').classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+
+// material vrstice (isti videz, ločen state)
+function qjRenderMaterials(){
+  const wrap=document.getElementById('qjMaterialsList');
+  if(!wrap) return;
+  if(qjMaterials.length===0) qjMaterials.push({name:'',qty:'',uom:'kos'});
+
+  wrap.innerHTML=qjMaterials.map((m,idx)=>`
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+      <input list="materialsCatalog" class="md:col-span-6" placeholder="Material"
+             value="${m.name||''}" oninput="qjOnMatNameInput(${idx}, this.value)"/>
+      <input type="number" step="0.01" class="md:col-span-3" placeholder="Količina"
+             value="${m.qty||''}" oninput="qjMaterials[${idx}].qty=this.value"/>
+      <select class="md:col-span-2" onchange="qjMaterials[${idx}].uom=this.value">
+        <option value="kos" ${m.uom==='kos'?'selected':''}>kos</option>
+        <option value="m"   ${m.uom==='m'?'selected':''}>m</option>
+        <option value="kpl" ${m.uom==='kpl'?'selected':''}>kpl</option>
+        <option value="h"   ${m.uom==='h'?'selected':''}>h</option>
+      </select>
+      <button type="button" class="md:col-span-1 btn btn-outline !py-2 !px-3"
+              onclick="qjMaterials.splice(${idx},1); qjRenderMaterials();">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+}
+window.qjOnMatNameInput=(idx,val)=>{
+  qjMaterials[idx].name=val;
+  const info=materialsCatalog[val];
+  if(info && info.uom){
+    qjMaterials[idx].uom=info.uom;
+    qjRenderMaterials();
+  }
+};
+
+document.getElementById('qjAddMaterialRow')?.addEventListener('click', ()=>{
+  qjMaterials.push({name:'',qty:'',uom:'kos'});
+  qjRenderMaterials();
+});
+
+async function qjSave(){
+  try{
+    if(!me) return alert("Najprej se prijavi.");
+    const pid = document.getElementById('qjProject').value;
+    const activity = (document.getElementById('qjActivity').value||'').trim();
+    const hours = parseFloat(document.getElementById('qjHours').value||'0');
+    if(!pid || !activity) return alert('Vnesi projekt in aktivnost.');
+
+    // materials filter (kot na glavni formi)
+    const mats = (qjMaterials||[]).filter(m => (m.name && m.name.trim()) || parseFloat(m.qty||"0")>0);
+
+    // upload (ista pot /upload)
+    const mediaInput = document.getElementById('qjMedia');
+    let newFiles = [];
+    if(mediaInput && mediaInput.files && mediaInput.files.length){
+      const fd = new FormData();
+      [...mediaInput.files].forEach(f=>fd.append('photos', f));
+      const up = await fetch(API_BASE+'/upload',{method:'POST',headers:{Authorization:'Bearer '+accessToken},body:fd});
+      if(!up.ok){
+        const e=await up.json().catch(()=>({}));
+        return showSaveNotification('Upload napaka: '+(e.error||up.status), false);
+      }
+      const j = await up.json();
+      newFiles = j.files || [];
+    }
+
+    // POST /jobs (enako kot glavni obrazec)
+    const res = await fetch(API_BASE+'/jobs',{
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+accessToken},
+      body: JSON.stringify({ projectId: pid, activity, hours, materials:mats, photos:newFiles })
+    });
+    if(!res.ok){
+      const e=await res.json().catch(()=>({}));
+      return showSaveNotification('Shranjevanje NI uspelo. ('+(e.error||res.status)+')', false);
+    }
+
+    qjClose();
+    showSaveNotification('Dnevnik uspešno shranjen!', true);
+    try{ renderJobLogs(); }catch{}
+  }catch(e){
+    showSaveNotification('Napaka pri shranjevanju dnevnika.', false);
+  }
+}
+
+
 /* ============ Dnevnik: Add/Edit na ISTEM OBRAZCU ============ */
 let editingLogId = null;           // null => dodajanje, string => urejanje
 let editingPhotos = [];            // obstoječe fotke iz vnosa (če urejamo)
@@ -1237,8 +1409,8 @@ function resetLogForm(){
 
 // klik na Shrani/Posodobi
 document.getElementById("addLog")?.addEventListener("click", async ()=>{
-  if (!me) return showSaveNotification('Shranjevanje NI uspelo. (' + (e.error||res.status) + ')', false);
-
+  if (!me) { alert('Najprej se prijavi.'); return; }
+  
   const pid = document.getElementById("logProject").value;
   const activity = document.getElementById("logActivity").value.trim();
   const hours = parseFloat(document.getElementById("logHours").value || "0");
@@ -1469,6 +1641,7 @@ function drawCalendar(){
   const cells=[]; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
   calGrid.innerHTML = cells.map(d=>{
     const key = ymd(d);
+    const past = isPastDayKey(key);
     // ...
 const inMonth = d.getMonth() === calMonth.getMonth();
 if (!inMonth) {
@@ -1512,8 +1685,10 @@ const hdr = `
     </div>`;
 }).join('');
 
-    const addBtn = isOwnerCeoVodja() && inMonth ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i><p class="cal-day">dodaj plan</p></button>` : '';
-    const lockCls = isOwnerCeoVodja() ? '' : 'cal-locked';
+    const addBtn = (isOwnerCeoVodja() && inMonth && !past)
+  ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i><p class="cal-day">dodaj plan</p></button>`
+  : '';
+    const lockCls = (isOwnerCeoVodja() && !past) ? '' : 'cal-locked';
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
 
@@ -1759,12 +1934,14 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
   const it = planMonth.days[dayKey][idx]; if(!it) return;
   it.statuses ||= {};
   const cur = it.statuses[me.email] || 'V teku';
-  if (cur === 'Opravljeno' && val !== 'Opravljeno') {
-    alert('Ta postavka je že označena kot Opravljeno in je zaklenjena.');
-    // osveži UI, da se select spet onemogoči (če je bil kako omogočen)
-    await renderWeek();
-    return;
-  }
+  if (val === 'Opravljeno'){
+  const projId = (meta && meta.projectId) ? meta.projectId : (it.projectId || '');
+  const planDesc = (it.note || meta?.activity || it.category || '').trim();
+  const timeStr = (it.time || '').trim();
+  const activity = `[Plan] ${planDesc}${timeStr ? ' • '+timeStr : ''}`.trim();
+  // PREJ: openJobModal(...)
+  qjOpen(projId, activity);   // <-- odpri NOV modal z istim obrazcem
+}
   it.statuses[me.email] = val;
   await savePlanMonth();
   // takoj osvežimo, da se select zaklene
