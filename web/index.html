@@ -1935,8 +1935,8 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
   it.statuses ||= {};
   const cur = it.statuses[me.email] || 'V teku';
   if (val === 'Opravljeno'){
-  const projId = (meta && meta.projectId) ? meta.projectId : (it.projectId || '');
-  const planDesc = (it.note || meta?.activity || it.category || '').trim();
+  const projId = (me && me.projectId) ? me.projectId : (it.projectId || '');
+  const planDesc = (it.note || me?.activity || it.category || '').trim();
   const timeStr = (it.time || '').trim();
   const activity = `[Plan] ${planDesc}${timeStr ? ' • '+timeStr : ''}`.trim();
   // PREJ: openJobModal(...)
