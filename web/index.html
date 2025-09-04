@@ -488,18 +488,32 @@ input[type="checkbox"]:checked::after{
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:col-span-2">
   <div>
     <label class="block text-sm mb-1">Datum (od)</label>
-    <input id="pmDateFrom" type="date">
+    <input id="pmDateFrom" type="date"
+           onfocus="this.showPicker && this.showPicker()"
+           inputmode="numeric">
   </div>
   <div>
     <label class="block text-sm mb-1">Datum (do, neobvezno)</label>
-    <input id="pmDateTo" type="date" placeholder="">
+    <input id="pmDateTo" type="date"
+           onfocus="this.showPicker && this.showPicker()"
+           inputmode="numeric" placeholder="">
   </div>
 </div>
 
-        <div>
-          <label class="block text-sm mb-1">Čas (od–do)</label>
-          <input id="pmTime" placeholder="npr. 08:00–12:00">
-        </div>
+<div class="grid grid-cols-2 gap-3">
+  <div>
+    <label class="block text-sm mb-1">Čas (od)</label>
+    <input id="pmTimeFrom" type="time" step="300"
+           onfocus="this.showPicker && this.showPicker()"
+           inputmode="numeric">
+  </div>
+  <div>
+    <label class="block text-sm mb-1">Čas (do)</label>
+    <input id="pmTimeTo" type="time" step="300"
+           onfocus="this.showPicker && this.showPicker()"
+           inputmode="numeric">
+  </div>
+</div>
 
         <div class="md:col-span-2">
           <label class="block text-sm mb-1">Projekt</label>
@@ -1773,6 +1787,12 @@ function daysBetweenInclusive(startISO, endISO){
 
 /* ---- modal: odpri in predizpolni ---- */
 
+function splitTimeRange(str){
+  if(!str) return ['', ''];
+  const m = String(str).replace(/\s/g,'').match(/^(\d{1,2}:\d{2})[–-](\d{1,2}:\d{2})$/);
+  return m ? [m[1], m[2]] : ['', ''];
+}
+
 function openPlanModal(dayKey, idx=null){
   pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
 
@@ -1789,7 +1809,9 @@ function openPlanModal(dayKey, idx=null){
   }
 
   document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
-  document.getElementById('pmTime').value     = it.time || '';
+const [tf, tt] = splitTimeRange(it.time || '');
+document.getElementById('pmTimeFrom').value = tf;
+document.getElementById('pmTimeTo').value   = tt;
   document.getElementById('pmCategory').value = it.category || 'Splošno';
   document.getElementById('pmStatus').value   = it.status || 'V teku';
   document.getElementById('pmNotes').value    = it.note || '';
@@ -1811,7 +1833,9 @@ function pm_collect(){
   const toISO    = (toRaw && toRaw >= fromISO) ? toRaw : fromISO;
 
   const projectId = document.getElementById('pmProject').value;
-  const time      = document.getElementById('pmTime').value.trim();
+  const tf = document.getElementById('pmTimeFrom').value.trim(); // "HH:MM"
+  const tt = document.getElementById('pmTimeTo').value.trim();   // "HH:MM"
+  const time = (tf && tt) ? `${tf}–${tt}` : (tf || tt || '');
   const category  = document.getElementById('pmCategory').value;
   const status    = document.getElementById('pmStatus').value;
   const note      = document.getElementById('pmNotes').value.trim();
@@ -1956,7 +1980,7 @@ window.updatePersonalStatus = async (dayKey, idx, val)=>{
     const projId   = it.projectId || '';
     const planDesc = (it.note || it.category || '').trim();
     const timeStr  = (it.time || '').trim();
-    const activity = `[Plan] ${planDesc}${timeStr ? ' • '+timeStr : ''}`.trim();
+    const activity = `${planDesc || ''}`.trim();
 
     qjOpen(projId, activity);
   }
