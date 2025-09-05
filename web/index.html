@@ -1086,11 +1086,11 @@ async function renderMyHours(){
   const from = new Date(fromISO).getTime();
   const to   = new Date(toISO).getTime() + 86399999;
 
-  // vzemi samo moje dnevnike; opcijsko filtriraj po projektu
+  // samo moji dnevniki (email=me.email), opcijsko po projektu
   const q = new URLSearchParams({
     from, to,
     ...(pid ? { projectId: pid } : {}),
-    ...(me?.email ? { email: me.email } : {})   // <<< samo prijavljeni
+    ...(me?.email ? { email: me.email } : {})
   }).toString();
 
   const r = await fetch(API_BASE + '/jobs?' + q, {
@@ -1098,7 +1098,7 @@ async function renderMyHours(){
   });
   const rows = r.ok ? await r.json() : [];
 
-  // agregiraj po projectId (samo moje vrstice)
+  // agregacija po projectId
   const agg = {};
   for (const j of rows) {
     const k = j.projectId || '';
@@ -1114,52 +1114,21 @@ async function renderMyHours(){
     return;
   }
 
-  tb.innerHTML = keys.map(pid => {
+  // vrstice + skupni seštevek
+  let total = 0;
+  const rowsHtml = keys.map(pid => {
     const pname = (projects.find(p => p.id === pid)?.name) || (pid || '—');
     const hrs = Math.round(agg[pid] * 100) / 100;
+    total += hrs;
     return `<tr><td>${pname}</td><td class="text-right">${hrs.toFixed(2)}</td></tr>`;
   }).join('');
-}async function renderMyHours(){
-  const fromISO = document.getElementById('mhFrom').value;
-  const toISO   = document.getElementById('mhTo').value;
-  const pid     = document.getElementById('mhProject').value || '';
 
-  const from = new Date(fromISO).getTime();
-  const to   = new Date(toISO).getTime() + 86399999;
+  const totalHtml = `<tr>
+      <td class="font-semibold">Skupaj</td>
+      <td class="text-right font-semibold">${(Math.round(total*100)/100).toFixed(2)}</td>
+    </tr>`;
 
-  // vzemi samo moje dnevnike; opcijsko filtriraj po projektu
-  const q = new URLSearchParams({
-    from, to,
-    ...(pid ? { projectId: pid } : {}),
-    ...(me?.email ? { email: me.email } : {})   // <<< samo prijavljeni
-  }).toString();
-
-  const r = await fetch(API_BASE + '/jobs?' + q, {
-    headers: { Authorization: 'Bearer ' + accessToken }
-  });
-  const rows = r.ok ? await r.json() : [];
-
-  // agregiraj po projectId (samo moje vrstice)
-  const agg = {};
-  for (const j of rows) {
-    const k = j.projectId || '';
-    const h = parseFloat(j.hours || 0) || 0;
-    agg[k] = (agg[k] || 0) + h;
-  }
-
-  const tb = document.getElementById('mhTable');
-  const keys = Object.keys(agg);
-
-  if (!keys.length) {
-    tb.innerHTML = `<tr><td colspan="2" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
-    return;
-  }
-
-  tb.innerHTML = keys.map(pid => {
-    const pname = (projects.find(p => p.id === pid)?.name) || (pid || '—');
-    const hrs = Math.round(agg[pid] * 100) / 100;
-    return `<tr><td>${pname}</td><td class="text-right">${hrs.toFixed(2)}</td></tr>`;
-  }).join('');
+  tb.innerHTML = rowsHtml + totalHtml;
 }
 
 
@@ -1727,42 +1696,43 @@ document.getElementById("cancelEditLog")?.addEventListener("click", ()=>{
 // priklop uredi na isti obrazec
 async function editLog(id){
   try{
-    const r=await fetch(API_BASE+'/jobs',{headers:{Authorization:'Bearer '+accessToken}});
-    const list = r.ok ? await r.json() : [];
-    const cur = list.find(x=>x.id===id);
-    const tFrom = cur.timeFrom || "";
-    const tTo   = cur.timeTo   || "";
+    // PREBERI NATANČNO TA VNOS
+    const r = await fetch(API_BASE + '/jobs/' + encodeURIComponent(id), {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const cur = await r.json();
+    if(!cur) throw new Error('Not found');
+
+    // časi (če obstajajo)
     const elF = document.getElementById("logTimeFrom");
     const elT = document.getElementById("logTimeTo");
-    if (elF) elF.value = tFrom;
-    if (elT) elT.value = tTo;
-    if(!cur) return alert('Dnevnik ni najden.');
-    updateAutoHoursLabel();
-    // preklop v “edit mode”
-    editingLogId = cur.id;
-    editingPhotos = Array.isArray(cur.photos) ? cur.photos : [];
+    if (elF) elF.value = cur.timeFrom || "";
+    if (elT) elT.value = cur.timeTo   || "";
+    updateAutoHoursLabel?.();
 
-    // napolni obrazec
-    document.getElementById("logProject").value = cur.projectId || projects[0]?.id || "";
-    document.getElementById("logActivity").value = cur.activity || "";
+    // v “edit mode”
+    editingLogId   = cur.id;
+    editingPhotos  = Array.isArray(cur.photos) ? cur.photos : [];
 
+    // polja
+    document.getElementById("logProject").value  = cur.projectId || projects[0]?.id || "";
+    document.getElementById("logActivity").value = cur.activity  || "";
 
+    const hoursInput = document.getElementById('logHours');
+    if (hoursInput){
+      const hrs = Number(cur.hours);
+      hoursInput.value = Number.isFinite(hrs) ? String(hrs) : "";
+    }
+
+    // materiali
     materials = Array.isArray(cur.materials) ? JSON.parse(JSON.stringify(cur.materials)) : [];
-    renderMaterials();
+    renderMaterials?.();
 
-if (cur.hours !== undefined && cur.hours !== null && cur.hours !== "") {
-  const hrs = Number(cur.hours);
-  hoursInput.value = Number.isFinite(hrs) ? String(hrs) : "";
-} else {
-  hoursInput.value = "";
-}
-
-    // UI: gumb + preklic
+    // UI
     const saveBtn = document.getElementById("addLog");
     if(saveBtn){ saveBtn.innerHTML = `<i class="fas fa-save mr-1"></i> Posodobi dnevnik`; }
     document.getElementById("cancelEditLog")?.classList.remove("hidden");
-
-    // skrolaj do obrazca (po želji)
     document.getElementById("tab-jobs")?.scrollIntoView({behavior:"smooth", block:"start"});
   }catch(e){
     alert('Napaka pri branju dnevnika.');
