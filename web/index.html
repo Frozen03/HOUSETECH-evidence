@@ -1128,7 +1128,7 @@ async function renderMyHours(){
       <td class="text-right font-semibold">${(Math.round(total*100)/100).toFixed(2)}</td>
     </tr>`;
 
-  tb.innerHTML = rowsHtml + totalHtml;
+  tb.innerHTML = totalHtml + rowsHtml;
 }
 
 
@@ -1696,48 +1696,49 @@ document.getElementById("cancelEditLog")?.addEventListener("click", ()=>{
 // priklop uredi na isti obrazec
 async function editLog(id){
   try{
-    // PREBERI NATANČNO TA VNOS
-    const r = await fetch(API_BASE + '/jobs/' + encodeURIComponent(id), {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    });
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const cur = await r.json();
-    if(!cur) throw new Error('Not found');
+    const r = await fetch(API_BASE + '/jobs', { headers:{ Authorization:'Bearer ' + accessToken } });
+    const list = r.ok ? await r.json() : [];
+    const cur  = list.find(x => x.id === id);
 
-    // časi (če obstajajo)
-    const elF = document.getElementById("logTimeFrom");
-    const elT = document.getElementById("logTimeTo");
-    if (elF) elF.value = cur.timeFrom || "";
-    if (elT) elT.value = cur.timeTo   || "";
-    updateAutoHoursLabel?.();
-
-    // v “edit mode”
-    editingLogId   = cur.id;
-    editingPhotos  = Array.isArray(cur.photos) ? cur.photos : [];
-
-    // polja
-    document.getElementById("logProject").value  = cur.projectId || projects[0]?.id || "";
-    document.getElementById("logActivity").value = cur.activity  || "";
-
-    const hoursInput = document.getElementById('logHours');
-    if (hoursInput){
-      const hrs = Number(cur.hours);
-      hoursInput.value = Number.isFinite(hrs) ? String(hrs) : "";
+    if (!cur){
+      alert('Dnevnik ni najden.');
+      return;
     }
 
-    // materiali
-    materials = Array.isArray(cur.materials) ? JSON.parse(JSON.stringify(cur.materials)) : [];
-    renderMaterials?.();
+    // časovna polja – nastavi samo, če obstajajo
+    const elF = document.getElementById('logTimeFrom');
+    const elT = document.getElementById('logTimeTo');
+    if (elF) elF.value = cur.timeFrom || '';
+    if (elT) elT.value = cur.timeTo   || '';
+    updateAutoHoursLabel();
 
-    // UI
-    const saveBtn = document.getElementById("addLog");
-    if(saveBtn){ saveBtn.innerHTML = `<i class="fas fa-save mr-1"></i> Posodobi dnevnik`; }
-    document.getElementById("cancelEditLog")?.classList.remove("hidden");
-    document.getElementById("tab-jobs")?.scrollIntoView({behavior:"smooth", block:"start"});
+    // preklop v “edit mode”
+    editingLogId  = cur.id;
+    editingPhotos = Array.isArray(cur.photos) ? cur.photos : [];
+
+    // ostala polja
+    document.getElementById('logProject').value  = cur.projectId || projects[0]?.id || '';
+    document.getElementById('logActivity').value = cur.activity || '';
+    // ure – pravilno polje!
+    const hoursEl = document.getElementById('logHours');
+    if (hoursEl){
+      const hrs = Number(cur.hours);
+      hoursEl.value = Number.isFinite(hrs) ? String(hrs) : '';
+    }
+
+    materials = Array.isArray(cur.materials) ? JSON.parse(JSON.stringify(cur.materials)) : [];
+    renderMaterials();
+
+    const saveBtn = document.getElementById('addLog');
+    if (saveBtn) saveBtn.innerHTML = `<i class="fas fa-save mr-1"></i> Posodobi dnevnik`;
+    document.getElementById('cancelEditLog')?.classList.remove('hidden');
+
+    document.getElementById('tab-jobs')?.scrollIntoView({ behavior:'smooth', block:'start' });
   }catch(e){
     alert('Napaka pri branju dnevnika.');
   }
 }
+
 
 function showSaveNotification(msg="Dnevnik uspešno shranjen!", ok=true) {
   const n = document.getElementById("saveNotification");
