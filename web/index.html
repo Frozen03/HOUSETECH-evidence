@@ -1499,7 +1499,8 @@ document.getElementById("addLog")?.addEventListener("click", async ()=>{
   
   const pid = document.getElementById("logProject").value;
   const activity = document.getElementById("logActivity").value.trim();
-  const hours = parseFloat(document.getElementById("logHours").value || "0");
+  const rawHrs = (document.getElementById("logHours").value || "").trim().replace(",", ".");
+const hours = rawHrs === "" ? 0 : (Number.isFinite(parseFloat(rawHrs)) ? parseFloat(rawHrs) : 0);
   if (!pid || !activity) return alert("Izpolni: projekt in aktivnost.");
   if(hours <= 0){ return alert("Nastavi čas od–do (ure morajo biti > 0)."); }
 
@@ -1554,6 +1555,7 @@ async function editLog(id){
     const r=await fetch(API_BASE+'/jobs',{headers:{Authorization:'Bearer '+accessToken}});
     const list = r.ok ? await r.json() : [];
     const cur = list.find(x=>x.id===id);
+    const hoursInput = document.getElementById("logHours");
     if(!cur) return alert('Dnevnik ni najden.');
 
     // preklop v “edit mode”
@@ -1563,10 +1565,17 @@ async function editLog(id){
     // napolni obrazec
     document.getElementById("logProject").value = cur.projectId || projects[0]?.id || "";
     document.getElementById("logActivity").value = cur.activity || "";
-    document.getElementById("logHours").value = typeof cur.hours==="number" ? cur.hours : (cur.hours || 0);
+
 
     materials = Array.isArray(cur.materials) ? JSON.parse(JSON.stringify(cur.materials)) : [];
     renderMaterials();
+
+if (cur.hours !== undefined && cur.hours !== null && cur.hours !== "") {
+  const hrs = Number(cur.hours);
+  hoursInput.value = Number.isFinite(hrs) ? String(hrs) : "";
+} else {
+  hoursInput.value = "";
+}
 
     // UI: gumb + preklic
     const saveBtn = document.getElementById("addLog");
