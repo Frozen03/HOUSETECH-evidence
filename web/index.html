@@ -990,6 +990,7 @@ function showAppAfterLogin(){
   document.getElementById('presencePanel')?.classList.remove('hidden');
   document.getElementById('todayPanel')?.classList.remove('hidden');
   renderTimeEntries();
+  renderMyHoursInit();
 }
 
 function showLoggedOut(){
@@ -1832,7 +1833,6 @@ async function renderReports(){
 
 /* ===================== PLAN: /workplan/month ===================== */
 
-const calGrid = document.getElementById('calGrid');
 document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
 document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await loadPlanMonth(); drawCalendar(); });
 document.getElementById('monthToday')?.addEventListener('click', async ()=>{ calMonth = new Date(); calMonth.setDate(1); await loadPlanMonth(); drawCalendar(); });
@@ -1849,8 +1849,8 @@ async function renderPlan(){
 }
 async function renderCalendar(){
   await loadPlanMonth();
-  bindCategoryChips();     
   drawCalendar();
+  bindCategoryChips();     
 }
 function isItemDone(it){
   if (it.status === 'Opravljeno') return true;
@@ -1859,6 +1859,8 @@ function isItemDone(it){
 }
 
 function drawCalendar(){
+const calGrid = document.getElementById('calGrid');  // lokalno, brez TDZ
+  if (!calGrid) return;
   document.getElementById('monthLabel').textContent = monthLabel();
   document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '' : '';
 
