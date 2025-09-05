@@ -611,12 +611,12 @@ input[type="checkbox"]:checked::after{
 <div class="md:col-span-3">
   <label class="block text-sm font-medium mb-1">Čas</label>
           <div class="grid grid-cols-2 gap-2">
-             <input id="logTimeFrom" type="time" step="300" placeholder="--:--"
+             <input id="qjTimeFro" type="time" step="300" placeholder="--:--"
                onfocus="this.showPicker && this.showPicker()" />
-             <input id="logTimeTo" type="time" step="300" placeholder="--:--"
+             <input id="qjTimeTo" type="time" step="300" placeholder="--:--"
                onfocus="this.showPicker && this.showPicker()" />
           </div>
-          <div id="logAutoHours" class="text-xs" style="color:var(--muted)">0 h</div>
+          <div id="qjHoursView" class="text-xs" style="color:var(--muted)">0 h</div>
             <input id="qjHours" type="hidden" />
           </div>
         </div>
@@ -849,11 +849,15 @@ const isOwnerOrCeo = () => (me?.roles||[]).some(r => r==='Owner' || r==='CEO');
 const isOwnerCeoVodja = () => (me?.roles||[]).some(r => r==='Owner' || r==='CEO' || r==='vodja');
 const isEmployeeOrStudent = () => (me?.roles||[]).some(r => r==='zaposlen' || r==='študent');
 
+let calMonth = new Date(); calMonth.setDate(1);
+let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note, statuses?:{[email]: 'V teku'|'Opravljeno'}} ]
+
 /* ===== Tabs ===== */
 function selectTab(name){
   ["time","plan","jobs","journals","reports","admin"].forEach(t=>{
     document.getElementById("tab-"+t).classList.add("hidden");
     const btn = document.querySelector(`[data-tab="${t}"]`);
+    const sel = document.querySelector(`[data-tab="${name}"]`);
     if(btn){ btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); }
   });
   document.getElementById("tab-"+name).classList.remove("hidden");
@@ -1441,17 +1445,17 @@ const tf = document.getElementById('qjTimeFrom');
 const tt = document.getElementById('qjTimeTo');
 const hv = document.getElementById('qjHoursView');
 const hh = document.getElementById('qjHours');
-tf.value = ''; tt.value = ''; hv.textContent = '0'; hh.value = '0';
 
 function qjRecalc(){
   const h = diffHoursRounded(tf.value, tt.value);
   hv.textContent = h.toFixed(2).replace('.00','');
   hh.value = String(h);
 }
-['input','change'].forEach(ev=>{
+['input','change'].forEach(ev => {
   tf.addEventListener(ev, qjRecalc);
   tt.addEventListener(ev, qjRecalc);
 });
+qjRecalc();
 
 function qjClose(){
   document.getElementById('qjModal').classList.add('hidden');
@@ -1827,8 +1831,6 @@ async function renderReports(){
 
 
 /* ===================== PLAN: /workplan/month ===================== */
-let calMonth = new Date(); calMonth.setDate(1);
-let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note, statuses?:{[email]: 'V teku'|'Opravljeno'}} ]
 
 const calGrid = document.getElementById('calGrid');
 document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
