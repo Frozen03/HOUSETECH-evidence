@@ -611,7 +611,7 @@ input[type="checkbox"]:checked::after{
 <div class="md:col-span-3">
   <label class="block text-sm font-medium mb-1">Čas</label>
           <div class="grid grid-cols-2 gap-2">
-             <input id="qjTimeFro" type="time" step="300" placeholder="--:--"
+             <input id="qjTimeFrom" type="time" step="300" placeholder="--:--"
                onfocus="this.showPicker && this.showPicker()" />
              <input id="qjTimeTo" type="time" step="300" placeholder="--:--"
                onfocus="this.showPicker && this.showPicker()" />
@@ -1083,37 +1083,83 @@ async function renderMyHours(){
   const toISO   = document.getElementById('mhTo').value;
   const pid     = document.getElementById('mhProject').value || '';
 
-  // uporabimo /jobs, ker vsebuje projectId in hours
   const from = new Date(fromISO).getTime();
   const to   = new Date(toISO).getTime() + 86399999;
-  const q    = new URLSearchParams({ from, to, ...(pid?{projectId:pid}:{}) }).toString();
 
-  const r = await fetch(API_BASE+'/jobs?'+q,{headers:{Authorization:'Bearer '+accessToken}});
+  // vzemi samo moje dnevnike; opcijsko filtriraj po projektu
+  const q = new URLSearchParams({
+    from, to,
+    ...(pid ? { projectId: pid } : {}),
+    ...(me?.email ? { email: me.email } : {})   // <<< samo prijavljeni
+  }).toString();
+
+  const r = await fetch(API_BASE + '/jobs?' + q, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
   const rows = r.ok ? await r.json() : [];
 
-  // agregiraj po (projectId)
+  // agregiraj po projectId (samo moje vrstice)
   const agg = {};
-  for(const j of rows){
-    const key = (j.projectId||'');
-    agg[key] = (agg[key]||0) + (parseFloat(j.hours||0) || 0);
+  for (const j of rows) {
+    const k = j.projectId || '';
+    const h = parseFloat(j.hours || 0) || 0;
+    agg[k] = (agg[k] || 0) + h;
   }
 
   const tb = document.getElementById('mhTable');
   const keys = Object.keys(agg);
-  if(!keys.length){
-    tb.innerHTML = `<tr><td colspan="3" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
+
+  if (!keys.length) {
+    tb.innerHTML = `<tr><td colspan="2" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
     return;
   }
 
-  tb.innerHTML = keys
-    .map(k=>{
-      const [mail,pid] = k.split('|');
-      const name  = usersDir[mail]?.name || mail || '—';
-      const pname = projects.find(p=>p.id===pid)?.name || (pid?pid:'Vsi');
-      const hrs = Math.round(agg[k]*100)/100;
-      return `<tr><td>${name}</td><td>${pname}</td><td class="text-right">${hrs.toFixed(2)}</td></tr>`;
-    })
-    .join('');
+  tb.innerHTML = keys.map(pid => {
+    const pname = (projects.find(p => p.id === pid)?.name) || (pid || '—');
+    const hrs = Math.round(agg[pid] * 100) / 100;
+    return `<tr><td>${pname}</td><td class="text-right">${hrs.toFixed(2)}</td></tr>`;
+  }).join('');
+}async function renderMyHours(){
+  const fromISO = document.getElementById('mhFrom').value;
+  const toISO   = document.getElementById('mhTo').value;
+  const pid     = document.getElementById('mhProject').value || '';
+
+  const from = new Date(fromISO).getTime();
+  const to   = new Date(toISO).getTime() + 86399999;
+
+  // vzemi samo moje dnevnike; opcijsko filtriraj po projektu
+  const q = new URLSearchParams({
+    from, to,
+    ...(pid ? { projectId: pid } : {}),
+    ...(me?.email ? { email: me.email } : {})   // <<< samo prijavljeni
+  }).toString();
+
+  const r = await fetch(API_BASE + '/jobs?' + q, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  const rows = r.ok ? await r.json() : [];
+
+  // agregiraj po projectId (samo moje vrstice)
+  const agg = {};
+  for (const j of rows) {
+    const k = j.projectId || '';
+    const h = parseFloat(j.hours || 0) || 0;
+    agg[k] = (agg[k] || 0) + h;
+  }
+
+  const tb = document.getElementById('mhTable');
+  const keys = Object.keys(agg);
+
+  if (!keys.length) {
+    tb.innerHTML = `<tr><td colspan="2" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = keys.map(pid => {
+    const pname = (projects.find(p => p.id === pid)?.name) || (pid || '—');
+    const hrs = Math.round(agg[pid] * 100) / 100;
+    return `<tr><td>${pname}</td><td class="text-right">${hrs.toFixed(2)}</td></tr>`;
+  }).join('');
 }
 
 
@@ -1832,6 +1878,7 @@ async function renderReports(){
 
 
 /* ===================== PLAN: /workplan/month ===================== */
+let activeCategory = 'Vse';
 
 document.getElementById('monthPrev')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()-1); await loadPlanMonth(); drawCalendar(); });
 document.getElementById('monthNext')?.addEventListener('click', async ()=>{ calMonth.setMonth(calMonth.getMonth()+1); await loadPlanMonth(); drawCalendar(); });
@@ -1930,11 +1977,10 @@ if ((done.length + pending.length) > 0) {
     return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
   }).join('');
 
-countMonthStats();
+;
 }
 
 /* -------- KPI & Filter -------- */
-let activeCategory = 'Vse';
 
 function countMonthStats() {
   const year = calMonth.getFullYear();
@@ -2008,6 +2054,7 @@ function splitTimeRange(str){
   const m = String(str).replace(/\s/g,'').match(/^(\d{1,2}:\d{2})[–-](\d{1,2}:\d{2})$/);
   return m ? [m[1], m[2]] : ['', ''];
 }
+
 
 function openPlanModal(dayKey, idx=null){
   pm_ctx = { dayKey, index: idx, isEdit: idx!==null };
