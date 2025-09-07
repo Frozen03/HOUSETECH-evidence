@@ -649,6 +649,26 @@ input[type="checkbox"]:checked::after{
 </div>
 <!-- =============== /QUICK DNEVNIK DEL (MODAL) ================== -->
 
+<!-- PLAN DETAILS (READ-ONLY) -->
+<div id="planDetailsModal" class="fixed inset-0 z-[110] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closePlanDetails()"></button>
+
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-2xl card relative rounded-t-2xl sm:rounded-2xl max-h-[85vh] overflow-y-auto">
+      <button type="button" class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closePlanDetails()">
+        <i class="fas fa-times"></i>
+      </button>
+
+      <h3 class="text-lg font-semibold mb-3 sticky top-0 pt-2 pb-2" style="background:var(--card); z-index:1;">
+        <i class="fas fa-info-circle mr-2 text-blue-500"></i>Podrobnosti plana
+      </h3>
+
+      <div id="planDetailsBody" class="space-y-2 text-sm"></div>
+      <div id="planDetailsActions" class="flex justify-end gap-2 mt-4"></div>
+    </div>
+  </div>
+</div>
+<!-- PLAN DETAILS (READ-ONLY) -->
 
 
   <!-- ===== Dnevnik del (vnos) ===== -->
@@ -1908,34 +1928,27 @@ const hdr = `
   const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
   const projName = projects.find(p => p.id === it.projectId)?.name || '—';
   const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+  const { done, pending } = splitPeopleByStatus(it);
 
-const { done, pending } = splitPeopleByStatus(it);
-
-let statusLine = '';
-if ((done.length + pending.length) > 0) {
-  statusLine = `
-    <div class="mt-1 text-[11px] flex flex-col gap-1">
-      ${done.map(nm => `
-        <span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 w-fit">
-          <i class="fas fa-check mr-1"></i>${nm}
-        </span>`).join('')}
-      ${pending.map(nm => `
-        <span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40 w-fit">
-          <i class="far fa-circle mr-1"></i>${nm}
-        </span>`).join('')}
-    </div>`;
-}
+  let statusLine = '';
+  if ((done.length + pending.length) > 0) {
+    statusLine = `
+      <div class="mt-1 text-[11px] flex flex-col gap-1">
+        ${done.map(nm => `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 w-fit"><i class="fas fa-check mr-1"></i>${nm}</span>`).join('')}
+        ${pending.map(nm => `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40 w-fit"><i class="far fa-circle mr-1"></i>${nm}</span>`).join('')}
+      </div>`;
+  }
 
   return `
-  <div class="cal-item ${colorCls}">
+  <div class="cal-item ${colorCls}" onclick="openPlanDetails('${key}', ${idx})">
     <div class="font-semibold truncate">${projName}</div>
     <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
     ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
     ${statusLine}
     ${isOwnerCeoVodja() ? `
       <div class="flex justify-end gap-1 mt-1">
-        <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-danger !py-0.5 !px-1.5 text-[11px]" onclick="removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+        <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
       </div>` : ''
     }
   </div>`;
@@ -1950,6 +1963,58 @@ if ((done.length + pending.length) > 0) {
 
 ;
 }
+
+function openPlanDetails(dayKey, idx){
+  const it = (planMonth.days[dayKey] || [])[idx];
+  if (!it) return;
+
+  const proj = projects.find(p => p.id === it.projectId)?.name || '—';
+  const ppl  = (it.people || []).map(e => usersDir[e]?.name || e);
+  const { done, pending } = splitPeopleByStatus(it);
+
+  const body = document.getElementById('planDetailsBody');
+  body.innerHTML = `
+    <div><b>Datum:</b> ${dayKey}</div>
+    <div><b>Projekt:</b> ${proj}</div>
+    ${it.time ? `<div><b>Čas:</b> ${it.time}</div>` : ``}
+    <div><b>Kategorija:</b> ${it.category || '—'}</div>
+    <div><b>Status (skupno):</b> ${it.status || 'V teku'}</div>
+    <div><b>Ekipa:</b> ${ppl.join(', ') || '—'}</div>
+    ${it.note ? `<div class="whitespace-pre-line"><b>Opombe:</b> ${it.note}</div>` : ``}
+    ${(done.length + pending.length) ? `
+      <div class="mt-2">
+        <div class="text-xs" style="color:var(--muted)">Opravili:</div>
+        <div>${done.join(', ') || '—'}</div>
+        <div class="text-xs mt-1" style="color:var(--muted)">V teku:</div>
+        <div>${pending.join(', ') || '—'}</div>
+      </div>` : ``}
+  `;
+
+  const actions = document.getElementById('planDetailsActions');
+  actions.innerHTML = '';
+  if (isOwnerCeoVodja()){
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-outline';
+    editBtn.innerHTML = '<i class="fas fa-pen"></i> Uredi';
+    editBtn.onclick = (ev)=>{ ev.stopPropagation(); closePlanDetails(); editPlanItem(dayKey, idx); };
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-danger';
+    delBtn.innerHTML = '<i class="fas fa-trash"></i> Briši';
+    delBtn.onclick = (ev)=>{ ev.stopPropagation(); closePlanDetails(); removePlanItem(dayKey, idx); };
+
+    actions.append(editBtn, delBtn);
+  }
+
+  document.getElementById('planDetailsModal').classList.remove('hidden');
+  document.body.classList.add('overflow-hidden');
+}
+
+function closePlanDetails(){
+  document.getElementById('planDetailsModal').classList.add('hidden');
+  document.body.classList.remove('overflow-hidden');
+}
+
 
 /* -------- KPI & Filter -------- */
 
