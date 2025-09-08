@@ -34,6 +34,9 @@ const P = {
   presence:   path.join(DATA_DIR, "presence.json"),
   jobs:       path.join(DATA_DIR, "jobs.json"),
   workplans:  path.join(DATA_DIR, "workplans"),
+  P.todos = path.join(DATA_DIR, "todos.json"),
+  P.projUploads = path.join(DATA_DIR, "uploads", "projects"),
+  fs.mkdirSync(P.projUploads, { recursive: true });
 };
 fs.mkdirSync(P.workplans, { recursive: true });
 
@@ -45,6 +48,8 @@ let projects  = readJSON(P.projects, []);
 let materials = readJSON(P.materials, []);
 let presence  = readJSON(P.presence, []);
 let jobs      = readJSON(P.jobs, []);
+let todos = readJSON(P.todos, []);     
+const saveTodos = () => writeJSON(P.todos, todos);
 
 const saveUsers     = () => writeJSON(P.users, users);
 const saveProjects  = () => writeJSON(P.projects, projects);
@@ -89,6 +94,17 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024, files: 10 } });
 app.use("/uploads", express.static(path.join(DATA_DIR, "uploads")));
+
+const projStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const pid = req.params.id;
+    const dir = path.join(P.projUploads, pid);
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => cb(null, crypto.randomUUID() + (path.extname(file.originalname||"").toLowerCase() || "")),
+});
+const projUpload = multer({ storage: projStorage, limits: { fileSize: 100 * 1024 * 1024, files: 20 } });
 
 // ===== auth =====
 app.post("/auth/google/verify", async (req, res) => {
@@ -181,6 +197,105 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
   projects = projects.filter(p => p.id !== id);
   if (projects.length === before) return res.status(404).json({ error: "Ni projekta" });
   saveProjects();
+  res.status(204).end();
+});
+
+
+// MEDIA (slike/video) iz dnevnikov po projektu
+app.get("/projects/:id/media", authRequired, (req, res) => {
+  const id = req.params.id;
+  const list = jobs
+    .filter(j => j.projectId === id)
+    .flatMap(j => (Array.isArray(j.photos) ? j.photos : []))
+    .filter(ph => typeof ph?.url === "string" && (ph.type||"").startsWith("image/") || (ph.type||"").startsWith("video/"))
+    .map(ph => ({ id: ph.id || crypto.randomUUID(), url: ph.url, type: ph.type || "image/*", ts: ph.ts || j?.ts || Date.now(), by: ph.by || j?.email || "" }));
+  res.json(list);
+});
+
+function getProjectById(id){ return projects.find(p=>p.id===id); }
+function ensureProjFilesArray(p){ if(!Array.isArray(p.files)) p.files = []; }
+
+// SEZNAM datotek projekta
+app.get("/projects/:id/files", authRequired, (req, res) => {
+  const p = getProjectById(req.params.id);
+  if(!p) return res.status(404).json({ error: "Ni projekta" });
+  ensureProjFilesArray(p);
+  res.json(p.files);
+});
+
+// UPLOAD (managerji)
+app.post("/projects/:id/files", authRequired, requireRole(["Owner","CEO","vodja"]), projUpload.array("file", 20), (req, res) => {
+  const p = getProjectById(req.params.id);
+  if(!p) return res.status(404).json({ error: "Ni projekta" });
+  ensureProjFilesArray(p);
+
+  const items = (req.files || []).map(f => {
+    const url = `/uploads/projects/${req.params.id}/${f.filename}`;
+    const meta = {
+      id: crypto.randomUUID(),
+      filename: f.filename,
+      originalName: f.originalname,
+      type: f.mimetype,
+      size: f.size,
+      url,
+      by: req.user.email,
+      ts: Date.now()
+    };
+    p.files.push(meta);
+    return meta;
+  });
+  saveProjects();
+  res.status(201).json(items);
+});
+
+// DELETE file (managerji)
+app.delete("/projects/:id/files/:fid", authRequired, requireRole(["Owner","CEO","vodja"]), (req, res) => {
+  const p = getProjectById(req.params.id);
+  if(!p) return res.status(404).json({ error: "Ni projekta" });
+  ensureProjFilesArray(p);
+
+  const i = p.files.findIndex(f => f.id === req.params.fid);
+  if(i === -1) return res.status(404).json({ error: "Ni datoteke" });
+
+  const filePath = path.join(P.projUploads, req.params.id, p.files[i].filename);
+  try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
+  p.files.splice(i,1);
+  saveProjects();
+  res.status(204).end();
+});
+
+
+// ToDo – seznam
+app.get("/projects/:id/todos", authRequired, requireRole(["Owner","CEO","vodja"]), (req, res) => {
+  res.json(todos.filter(t=>t.projectId===req.params.id).sort((a,b)=>a.ts-b.ts));
+});
+
+// ToDo – dodaj
+app.post("/projects/:id/todos", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
+  const text = String(req.body?.text||"").trim();
+  if(!text) return res.status(400).json({ error: "Manjka text" });
+  const item = { id: crypto.randomUUID(), projectId: req.params.id, text, done:false, ts: Date.now(), by: req.user.email };
+  todos.push(item); saveTodos();
+  res.status(201).json(item);
+});
+
+// ToDo – spremeni
+app.patch("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
+  const i = todos.findIndex(t=>t.id===req.params.tid && t.projectId===req.params.id);
+  if(i===-1) return res.status(404).json({ error:"Ni naloge" });
+  const { text, done } = req.body||{};
+  if(typeof text==="string") todos[i].text = text.trim();
+  if(typeof done==="boolean") todos[i].done = done;
+  saveTodos();
+  res.json(todos[i]);
+});
+
+// ToDo – izbriši
+app.delete("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
+  const before = todos.length;
+  todos = todos.filter(t=>!(t.id===req.params.tid && t.projectId===req.params.id));
+  if(before===todos.length) return res.status(404).json({ error:"Ni naloge" });
+  saveTodos();
   res.status(204).end();
 });
 
