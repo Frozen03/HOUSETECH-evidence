@@ -387,15 +387,19 @@ input[type="checkbox"]:checked::after{
 
   <!-- TABS -->
   <nav id="tabsNav" class="mb-6 hidden">
-    <div class="tabs-wrap inline-flex">
-      <button data-tab="time" class="tab-btn tab-active"><i class="far fa-clock mr-2"></i>Evidenca ur</button>
-      <button id="tabBtnPlan" data-tab="plan" class="tab-btn tab-inactive hidden"><i class="fas fa-calendar-alt mr-2"></i>Plan dela</button>
-      <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
-      <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
-      <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
-      <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
-    </div>
-  </nav>
+  <div class="tabs-wrap inline-flex">
+    <button data-tab="time" class="tab-btn tab-active"><i class="far fa-clock mr-2"></i>Evidenca ur</button>
+    <button id="tabBtnProjects" data-tab="projects" class="tab-btn tab-inactive"><i class="fas fa-folder-open mr-2"></i>Projekti</button>
+
+    <button id="tabBtnPlan" data-tab="plan" class="tab-btn tab-inactive hidden"><i class="fas fa-calendar-alt mr-2"></i>Plan dela</button>
+    <button id="tabBtnTodo" data-tab="todo" class="tab-btn tab-inactive hidden"><i class="fas fa-list-check mr-2"></i>ToDo</button>
+
+    <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
+    <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
+    <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
+    <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
+  </div>
+</nav>
 
   <!-- ===== Evidenca ur ===== -->
   <section id="tab-time">
@@ -443,6 +447,50 @@ input[type="checkbox"]:checked::after{
   </div>
 </div>
   </section>
+
+<!-- ===== Projekti ===== -->
+<section id="tab-projects" class="hidden section-center">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold"><i class="fas fa-folder-open mr-2 text-blue-500"></i>Projekti</h2>
+
+      <!-- “Dodaj projekt” je tu – vidno samo Owner/CEO/vodja z JS -->
+      <div id="prAddWrap" class="flex gap-2 hidden">
+        <input id="prNewName" class="min-w-[240px]" placeholder="Ime projekta">
+        <button id="prAddBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Dodaj projekt</button>
+      </div>
+    </div>
+
+    <!-- mreža map -->
+    <div id="prGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    <p id="prEmpty" class="text-sm mt-2 hidden" style="color:var(--muted)">Ni projektov.</p>
+  </div>
+</section>
+
+<!-- Modal projekta: datoteke + media iz dnevnikov -->
+<div id="projectModal" class="fixed inset-0 z-[120] hidden">
+  <button class="absolute inset-0 bg-black/50" onclick="closeProjectModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-4xl card relative rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeProjectModal()"><i class="fas fa-times"></i></button>
+      <h3 id="pmTitle" class="text-lg font-semibold mb-3"><i class="fas fa-folder-open mr-2 text-blue-500"></i></h3>
+
+      <!-- Naloži (vidno managerjem) -->
+      <div id="projUploadWrap" class="mb-3 hidden">
+        <input id="projUploadInput" type="file" multiple />
+        <button id="projUploadBtn" class="btn btn-primary mt-2"><i class="fas fa-upload"></i> Naloži</button>
+      </div>
+
+      <h4 class="font-semibold mb-2"><i class="fas fa-image mr-2 text-blue-500"></i>Slike/Video (iz dnevnikov)</h4>
+      <div id="projMedia" class="media-grid mb-4"></div>
+
+      <h4 class="font-semibold mb-2"><i class="fas fa-file mr-2 text-blue-500"></i>Datoteke</h4>
+      <div id="projFiles" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+      <p id="projFilesEmpty" class="text-sm" style="color:var(--muted)"></p>
+    </div>
+  </div>
+</div>
+
 
   <!-- ===== PLAN DELA ===== -->
   <section id="tab-plan" class="hidden">
@@ -684,6 +732,31 @@ input[type="checkbox"]:checked::after{
 <!-- PLAN DETAILS (READ-ONLY) -->
 
 
+<!-- ===== ToDo ===== -->
+<section id="tab-todo" class="hidden section-center">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold"><i class="fas fa-list-check mr-2 text-blue-500"></i>ToDo</h2>
+      <div class="text-sm" style="color:var(--muted)">Vidno: Owner, CEO, vodja</div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-3">
+      <div class="md:col-span-2">
+        <label class="block text-sm mb-1">Projekt</label>
+        <select id="todoProject"></select>
+      </div>
+      <div class="md:col-span-2 flex items-end gap-2">
+        <input id="todoText" placeholder="Nova naloga…" />
+        <button id="todoAdd" class="btn btn-primary"><i class="fas fa-plus"></i> Dodaj</button>
+      </div>
+    </div>
+
+    <ul id="todoList" class="space-y-2"></ul>
+    <p id="todoEmpty" class="text-sm" style="color:var(--muted)"></p>
+  </div>
+</section>
+
+
   <!-- ===== Dnevnik del (vnos) ===== -->
   <section id="tab-jobs" class="hidden section-center">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -887,15 +960,18 @@ let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note
 
 /* ===== Tabs ===== */
 function selectTab(name){
-  ["time","plan","jobs","journals","reports","admin"].forEach(t=>{
-    document.getElementById("tab-"+t).classList.add("hidden");
+  ["time","projects","plan","todo","jobs","journals","reports","admin"].forEach(t=>{
+    const sec = document.getElementById("tab-"+t);
+    if (sec) sec.classList.add("hidden");
     const btn = document.querySelector(`[data-tab="${t}"]`);
-    const sel = document.querySelector(`[data-tab="${name}"]`);
-    if(btn){ btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); }
+    if (btn) { btn.classList.remove('tab-active'); btn.classList.add('tab-inactive'); }
   });
-  document.getElementById("tab-"+name).classList.remove("hidden");
+  document.getElementById("tab-"+name)?.classList.remove("hidden");
   const sel = document.querySelector(`[data-tab="${name}"]`);
   if(sel){ sel.classList.add('tab-active'); sel.classList.remove('tab-inactive'); }
+
+  if(name==="projects"){ renderProjectsPanel(); }
+  if(name==="todo"){ ensureTodoInit(); }
   if(name==="jobs"){ try{ renderMaterials(); renderMaterialsCatalogDatalist(); renderJobLogs(); }catch(e){} }
   if(name==="admin"){ adminReload(); }
   if(name==="reports"){ prepareReportFilters(); renderReports(); }
@@ -975,6 +1051,8 @@ function applyRoleUI(){
   const btnPlan    = document.getElementById('tabBtnPlan');
   const btnJrn     = document.getElementById('tabBtnJournals');
 
+  document.getElementById('tabBtnProjects')?.classList.remove('hidden');
+
   if (btnReports) btnReports.classList.toggle('hidden', !isOwner && !isCEO);
   if (btnAdmin){
     // Admin naj bo viden le Owner/CEO (pri tebi je bilo včasih display namesto hidden)
@@ -984,6 +1062,8 @@ function applyRoleUI(){
     // Plan je viden managerjem (mesečni) in zaposlenim/študentom (tedenski)
     btnPlan.classList.toggle('hidden', !(isMgr || isEmp));
   }
+  document.getElementById('tabBtnTodo')?.classList.toggle('hidden', !mgr);
+  document.getElementById('prAddWrap')?.classList.toggle('hidden', !mgr);
   if (btnJrn){
     // Dnevniki samo managerji (Owner/CEO/vodja)
     btnJrn.classList.toggle('hidden', !isMgr);
@@ -1415,6 +1495,130 @@ function updatePresenceButtons(entries){
   }
 }
 
+// === Projekti ===
+let prCache = [];            // seznam projektov
+let prOpenId = null;         // trenutno odprt projekt v modalu
+
+async function renderProjectsPanel(){
+  // projekti uporabljajo obstoječ /projects
+  prCache = await fetchJSON("/projects");
+  const grid = document.getElementById('prGrid');
+  const empty = document.getElementById('prEmpty');
+  grid.innerHTML = "";
+  if(!prCache.length){ empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  prCache.forEach(p=>{
+    const el = document.createElement('button');
+    el.className = "card text-left hover:ring-2";
+    el.innerHTML = `
+      <div class="flex items-center gap-3">
+        <i class="fas fa-folder-open text-xl"></i>
+        <div>
+          <div class="font-semibold">${escapeHtml(p.name)}</div>
+          ${p.address?`<div class="text-xs" style="color:var(--muted)">${escapeHtml(p.address)}</div>`:""}
+        </div>
+      </div>`;
+    el.onclick = ()=>openProjectModal(p.id, p.name);
+    grid.appendChild(el);
+  });
+}
+
+async function openProjectModal(id, name){
+  prOpenId = id;
+  document.getElementById('pmTitle').innerText = name;
+  document.getElementById('projectModal').classList.remove('hidden');
+
+  // upload viden samo managerjem
+  document.getElementById('projUploadWrap').classList.toggle('hidden', !isOwnerCeoVodja());
+
+  await refreshProjectMediaAndFiles();
+}
+
+function closeProjectModal(){
+  prOpenId = null;
+  document.getElementById('projectModal').classList.add('hidden');
+}
+
+async function refreshProjectMediaAndFiles(){
+  if(!prOpenId) return;
+
+  // MEDIA iz dnevnikov
+  const media = await fetchJSON(`/projects/${encodeURIComponent(prOpenId)}/media`);
+  const mg = document.getElementById('projMedia');
+  mg.innerHTML = "";
+  media.forEach(m=>{
+    const wrap = document.createElement('div'); wrap.className="media-thumb";
+    if(m.type.startsWith('video')){
+      wrap.innerHTML = `<video src="${m.url}" controls></video>`;
+    }else{
+      wrap.innerHTML = `<a href="${m.url}" target="_blank"><img src="${m.url}" alt=""></a>`;
+    }
+    mg.appendChild(wrap);
+  });
+  if(media.length===0) mg.innerHTML = `<div class="text-sm" style="color:var(--muted)">Ni slik/videa iz dnevnikov.</div>`;
+
+  // DATOTEKE
+  const files = await fetchJSON(`/projects/${encodeURIComponent(prOpenId)}/files`);
+  const fg = document.getElementById('projFiles');
+  const empty = document.getElementById('projFilesEmpty');
+  fg.innerHTML=""; empty.textContent="";
+  if(!files.length){ empty.textContent="Ni datotek."; return; }
+
+  files.forEach(f=>{
+    const card = document.createElement('div');
+    card.className = "card flex justify-between items-center";
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <i class="fas fa-file text-lg"></i>
+        <div>
+          <a class="font-medium underline" href="${f.url}" target="_blank">${escapeHtml(f.name || f.originalName || f.filename)}</a>
+          <div class="text-xs" style="color:var(--muted)">${(f.type||"").split('/')[1]||'datoteka'} • ${(Math.round((f.size||0)/1024))} KB</div>
+        </div>
+      </div>
+      ${isOwnerCeoVodja()?`<button class="btn btn-outline !py-1" onclick="deleteProjectFile('${f.id}')"><i class="fas fa-trash"></i></button>`:""}
+    `;
+    fg.appendChild(card);
+  });
+}
+
+// upload
+document.getElementById('projUploadBtn')?.addEventListener('click', async ()=>{
+  const inp = document.getElementById('projUploadInput');
+  if(!prOpenId || !inp.files?.length) return;
+  const fd = new FormData();
+  [...inp.files].forEach(f=>fd.append('file', f));
+  const res = await fetch(`/projects/${encodeURIComponent(prOpenId)}/files`,{
+    method:'POST',
+    headers:{ 'Authorization': 'Bearer '+accessToken },
+    body: fd
+  });
+  if(!res.ok){ return toast("Nalaganje ni uspelo.", true); }
+  inp.value="";
+  toast("Naloženo.");
+  await refreshProjectMediaAndFiles();
+});
+
+async function deleteProjectFile(fid){
+  if(!confirm("Izbrišem datoteko?")) return;
+  const res = await fetch(`/projects/${encodeURIComponent(prOpenId)}/files/${encodeURIComponent(fid)}`,{
+    method:'DELETE', headers:{ 'Authorization': 'Bearer '+accessToken }
+  });
+  if(!res.ok) return toast("Brisanje ni uspelo.", true);
+  toast("Izbrisano.");
+  await refreshProjectMediaAndFiles();
+}
+
+// dodaj projekt
+document.getElementById('prAddBtn')?.addEventListener('click', async ()=>{
+  const name = document.getElementById('prNewName').value.trim();
+  if(!name) return;
+  const res = await fetchJSON('/projects', { method:'POST', body:{ name } });
+  if(res?.error){ return alert(res.error); }
+  document.getElementById('prNewName').value="";
+  toast("Projekt dodan.");
+  await renderProjectsPanel();
+});
 
 /* ===== Dnevnik (ONLINE + media) ===== */
 document.getElementById("addMaterialRow")?.addEventListener("click", ()=>{ materials.push({name:'',qty:'',uom:'kos'}); renderMaterials(); });
@@ -1465,6 +1669,66 @@ async function deleteLog(id){
   }
   renderJobLogs();
 }
+
+// === ToDo ===
+let todoInit = false;
+function ensureTodoInit(){
+  if(todoInit) return; todoInit = true;
+
+  // napolni seznam projektov
+  fillProjectsSelect('todoProject');
+
+  document.getElementById('todoAdd').addEventListener('click', async ()=>{
+    const pid = document.getElementById('todoProject').value;
+    const txt = document.getElementById('todoText').value.trim();
+    if(!pid || !txt) return;
+    const r = await fetchJSON(`/projects/${encodeURIComponent(pid)}/todos`, { method:'POST', body:{ text: txt } });
+    if(r?.error){ return alert(r.error); }
+    document.getElementById('todoText').value="";
+    await loadTodos();
+  });
+
+  document.getElementById('todoProject').addEventListener('change', loadTodos);
+  loadTodos();
+}
+
+async function loadTodos(){
+  const pid = document.getElementById('todoProject').value;
+  const list = document.getElementById('todoList');
+  const empty = document.getElementById('todoEmpty');
+  list.innerHTML=""; empty.textContent="";
+
+  if(!pid){ empty.textContent="Izberi projekt."; return; }
+
+  const todos = await fetchJSON(`/projects/${encodeURIComponent(pid)}/todos`);
+  if(!todos.length){ empty.textContent="Brez nalog."; return; }
+
+  todos.forEach(t=>{
+    const li = document.createElement('li');
+    li.className = "card flex items-center justify-between";
+    li.innerHTML = `
+      <label class="flex items-center gap-2">
+        <input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${t.id}', this.checked)" />
+        <span class="${t.done?'line-through opacity-60':''}">${escapeHtml(t.text)}</span>
+      </label>
+      <button class="btn btn-outline !py-1" onclick="delTodo('${t.id}')"><i class="fas fa-trash"></i></button>
+    `;
+    list.appendChild(li);
+  });
+}
+
+async function toggleTodo(id, done){
+  const pid = document.getElementById('todoProject').value;
+  await fetchJSON(`/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(id)}`, { method:'PATCH', body:{ done } });
+}
+
+async function delTodo(id){
+  const pid = document.getElementById('todoProject').value;
+  if(!confirm('Izbrišem nalogo?')) return;
+  const res = await fetch(`/projects/${encodeURIComponent(pid)}/todos/${encodeURIComponent(id)}`, { method:'DELETE', headers:{ 'Authorization':'Bearer '+accessToken } });
+  if(res.ok) loadTodos();
+}
+
 
   
 // ===== Quick Journal (modal) =====
