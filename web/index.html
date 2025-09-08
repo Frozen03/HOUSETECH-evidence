@@ -175,7 +175,19 @@ input[type="checkbox"]:checked::after{
 .tbl th{ background:var(--tab-inactive); text-align:left; }
 
 /* ====== Koledar (mesečni) ====== */
-.cal-grid{ display:grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap:.5rem; }
+.cal-grid{
+  display:grid;
+  grid-template-columns: 42px repeat(7, minmax(0,1fr)) !important;  /* + ozka kolona za teden */
+  gap:.5rem;
+}
+.cal-wn{
+  width:42px; min-width:42px;               /* naj bo res ozka */
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:.8rem; color:var(--muted);
+  border:1px solid var(--border); border-radius:.5rem;
+  background:var(--tab-inactive);
+  min-height:130px;
+}
 .cal-cell{
   background:var(--card); border:1px solid var(--border); border-radius:var(--radius-md);
   min-height:130px; padding:.5rem; display:flex; flex-direction:column; gap:.25rem;
@@ -183,14 +195,6 @@ input[type="checkbox"]:checked::after{
 .cal-numb{ font-size:.85rem; font-weight:700; color:var(--muted); display:flex; justify-content:space-between; }
 .cal-day{ font-size:.75rem; font-weight:600; color:var(--muted); text-transform: lowercase; }
 .cal-locked{ opacity:.6; pointer-events:none; }
-
-.cal-wn{
-  display:flex; align-items:center; justify-content:center;
-  font-weight:700; font-size:.8rem; color:var(--muted);
-  border:1px solid var(--border); border-radius:.5rem;
-  background:var(--tab-inactive);
-  min-height:130px;
-}
 
 .cal-item{
   border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem;
@@ -293,13 +297,13 @@ input[type="checkbox"]:checked::after{
 @media (max-width:1024px){
   .tabs-wrap{ display:flex; overflow:auto; }
   .tab-btn{ font-size:.9rem; }
-  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)) !important; }
   .cal-wn{ display:none; }
 }
 @media (max-width:768px){
   h1{ font-size:1.25rem; }
   .card{ padding:1rem; }
-  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .cal-grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
   .week-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 @media (max-width:640px){
@@ -309,7 +313,7 @@ input[type="checkbox"]:checked::after{
   .tabs-wrap{ overflow:visible; flex-wrap:wrap; gap:.35rem; }
   .tab-btn{ flex:1 1 calc(50% - .35rem); text-align:center; }
 
-  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .cal-grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
   .cal-cell{ min-height:150px; }
 
   .week-grid{ grid-template-columns: 1fr; }
