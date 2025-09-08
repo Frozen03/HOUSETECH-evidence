@@ -1062,8 +1062,8 @@ function applyRoleUI(){
     // Plan je viden managerjem (mesečni) in zaposlenim/študentom (tedenski)
     btnPlan.classList.toggle('hidden', !(isMgr || isEmp));
   }
-  document.getElementById('tabBtnTodo')?.classList.toggle('hidden', !mgr);
-  document.getElementById('prAddWrap')?.classList.toggle('hidden', !mgr);
+  document.getElementById('tabBtnTodo')?.classList.toggle('hidden', !ismgr);
+  document.getElementById('prAddWrap')?.classList.toggle('hidden', !ismgr);
   if (btnJrn){
     // Dnevniki samo managerji (Owner/CEO/vodja)
     btnJrn.classList.toggle('hidden', !isMgr);
