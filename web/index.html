@@ -184,6 +184,14 @@ input[type="checkbox"]:checked::after{
 .cal-day{ font-size:.75rem; font-weight:600; color:var(--muted); text-transform: lowercase; }
 .cal-locked{ opacity:.6; pointer-events:none; }
 
+.cal-wn{
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:.8rem; color:var(--muted);
+  border:1px solid var(--border); border-radius:.5rem;
+  background:var(--tab-inactive);
+  min-height:130px;
+}
+
 .cal-item{
   border:1px dashed var(--border); border-radius:.5rem; padding:.25rem .35rem; font-size:.8rem;
   background:var(--tab-inactive); transition: background .2s, border-color .2s, color .2s;
@@ -286,6 +294,7 @@ input[type="checkbox"]:checked::after{
   .tabs-wrap{ display:flex; overflow:auto; }
   .tab-btn{ font-size:.9rem; }
   .cal-grid{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+  .cal-wn{ display:none; }
 }
 @media (max-width:768px){
   h1{ font-size:1.25rem; }
@@ -1897,72 +1906,93 @@ function isItemDone(it){
 }
 
 function drawCalendar(){
-const calGrid = document.getElementById('calGrid');  // lokalno, brez TDZ
+  const calGrid = document.getElementById('calGrid');
   if (!calGrid) return;
+
   document.getElementById('monthLabel').textContent = monthLabel();
   document.getElementById('planPermNote').textContent = isOwnerCeoVodja() ? '' : '';
 
   const first = new Date(calMonth); first.setDate(1);
-  const firstWeekday = (first.getDay()+6)%7; // pon=0
-  const start = new Date(first); start.setDate(first.getDate()-firstWeekday);
+  const firstWeekday = (first.getDay()+6)%7;               // pon=0
+  const daysInMonth  = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0).getDate();
+  const totalSlots   = firstWeekday + daysInMonth;
+  const weeks        = Math.ceil(totalSlots / 7);
 
-  const cells=[]; for(let i=0;i<42;i++){ const d=new Date(start); d.setDate(start.getDate()+i); cells.push(d); }
-  calGrid.innerHTML = cells.map(d=>{
-    const key = ymd(d);
-    const past = isPastDayKey(key);
-    // ...
-const inMonth = d.getMonth() === calMonth.getMonth();
-if (!inMonth) {
-  return `<div class="cal-cell cal-out cal-locked"></div>`;
-}
-const items = planMonth.days[key] || [];
-const dayNum = d.toLocaleDateString('sl-SI',{day:'2-digit'});
-const weekday = d.toLocaleDateString('sl-SI',{weekday:'short'});
-const hdr = `
-  <div class="cal-numb">${dayNum}
-    <div class="cal-day"> ${weekday}
-    </div>
-</div>`;
+  const start = new Date(first); start.setDate(first.getDate() - firstWeekday);
 
-   const list = items.map((it, idx) => {
-  const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
-  const projName = projects.find(p => p.id === it.projectId)?.name || '—';
-  const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
-  const { done, pending } = splitPeopleByStatus(it);
+  // zgradimo vse vrstice (teden za tednom)
+  const rows = [];
+  for(let w=0; w<weeks; w++){
+    // === LEVI OZKI STOLPEC: ŠT. TEDNA ===
+    const rowStart = new Date(start); rowStart.setDate(start.getDate() + w*7);
+    const wn = isoWeek(rowStart);
+    rows.push(`<div class="cal-wn" title="Teden ${wn}">${String(wn).padStart(2,'0')}</div>`);
 
-  let statusLine = '';
-  if ((done.length + pending.length) > 0) {
-    statusLine = `
-      <div class="mt-1 text-[11px] flex flex-col gap-1">
-        ${done.map(nm => `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 w-fit"><i class="fas fa-check mr-1"></i>${nm}</span>`).join('')}
-        ${pending.map(nm => `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40 w-fit"><i class="far fa-circle mr-1"></i>${nm}</span>`).join('')}
-      </div>`;
+    // === 7 DNI V VRSTICI ===
+    for(let d=0; d<7; d++){
+      const day = new Date(rowStart); day.setDate(rowStart.getDate() + d);
+      const key = ymd(day);
+      const inMonth = day.getMonth() === calMonth.getMonth();
+      const past = isPastDayKey(key);
+      const items = planMonth.days[key] || [];
+
+      if (!inMonth){
+        rows.push(`<div class="cal-cell cal-out cal-locked"></div>`);
+        continue;
+      }
+
+      const dayNum = day.toLocaleDateString('sl-SI',{day:'2-digit'});
+      const weekday = day.toLocaleDateString('sl-SI',{weekday:'short'});
+      const hdr = `
+        <div class="cal-numb">${dayNum}
+          <div class="cal-day">${weekday}</div>
+        </div>`;
+
+      const list = items.map((it, idx) => {
+        const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
+        const projName = projects.find(p => p.id === it.projectId)?.name || '—';
+        const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
+        const { done, pending } = splitPeopleByStatus(it);
+
+        let statusLine = '';
+        if ((done.length + pending.length) > 0) {
+          statusLine = `
+            <div class="mt-1 text-[11px] flex flex-col gap-1">
+              ${done.map(nm => `<span class="px-2 py-[2px] rounded-full bg-green-100 text-green-800 dark:text-green-200 dark:bg-green-900/40 w-fit"><i class="fas fa-check mr-1"></i>${nm}</span>`).join('')}
+              ${pending.map(nm => `<span class="px-2 py-[2px] rounded-full bg-yellow-100 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900/40 w-fit"><i class="far fa-circle mr-1"></i>${nm}</span>`).join('')}
+            </div>`;
+        }
+
+        return `
+        <div class="cal-item ${colorCls}" onclick="openPlanDetails('${key}', ${idx})">
+          <div class="font-semibold truncate">${projName}</div>
+          <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
+          ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
+          ${statusLine}
+          ${isOwnerCeoVodja() ? `
+            <div class="flex justify-end gap-1 mt-1">
+              <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
+              <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
+            </div>` : ''
+          }
+        </div>`;
+      }).join('');
+
+      const addBtn = (isOwnerCeoVodja() && !past)
+        ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i> dodaj plan</button>`
+        : '';
+
+      const lockCls = (isOwnerCeoVodja() && !past) ? '' : 'cal-locked';
+      rows.push(`<div class="cal-cell ${lockCls}">${hdr}${list}${addBtn}</div>`);
+    }
   }
 
-  return `
-  <div class="cal-item ${colorCls}" onclick="openPlanDetails('${key}', ${idx})">
-    <div class="font-semibold truncate">${projName}</div>
-    <div class="text-[11px]" style="color:var(--muted)">${it.time ? it.time + ' • ' : ''}${peopleNames.join(', ') || '—'}</div>
-    ${it.note ? `<div class="text-[11px] italic mt-0.5 truncate">${it.note}</div>` : ''}
-    ${statusLine}
-    ${isOwnerCeoVodja() ? `
-      <div class="flex justify-end gap-1 mt-1">
-        <button class="btn btn-outline !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); editPlanItem('${key}', ${idx})"><i class="fas fa-pen"></i></button>
-        <button class="btn btn-danger  !py-0.5 !px-1.5 text-[11px]" onclick="event.stopPropagation(); removePlanItem('${key}', ${idx})"><i class="fas fa-trash"></i></button>
-      </div>` : ''
-    }
-  </div>`;
-}).join('');
+  calGrid.innerHTML = rows.join('');
 
-    const addBtn = (isOwnerCeoVodja() && inMonth && !past)
-  ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i><p class="cal-day">dodaj plan</p></button>`
-  : '';
-    const lockCls = (isOwnerCeoVodja() && !past) ? '' : 'cal-locked';
-    return `<div class="cal-cell ${lockCls}">${hdr}${list||''}${addBtn}</div>`;
-  }).join('');
-
-;
+  // KPI in filtri ostanejo kot prej
+  countMonthStats();
 }
+
 
 function openPlanDetails(dayKey, idx){
   const it = (planMonth.days[dayKey] || [])[idx];
@@ -2054,6 +2084,15 @@ function bindCategoryChips(){
 
 // urejanje
 /* === helpers za modal === */
+function isoWeek(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;            // pon=1 … ned=7
+  d.setUTCDate(d.getUTCDate() + 4 - day);    // na četrtek
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+
 let pm_ctx = { dayKey:null, index:null, isEdit:false };
 
 function pm_fillProjects(){
