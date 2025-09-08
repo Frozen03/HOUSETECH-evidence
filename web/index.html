@@ -455,17 +455,21 @@ input[type="checkbox"]:checked::after{
       <h2 class="text-lg font-semibold"><i class="fas fa-folder-open mr-2 text-blue-500"></i>Projekti</h2>
 
       <!-- “Dodaj projekt” je tu – vidno samo Owner/CEO/vodja z JS -->
-      <div id="prAddWrap" class="flex gap-2 hidden">
-        <input id="prNewName" class="min-w-[240px]" placeholder="Ime projekta">
-        <button id="prAddBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Dodaj projekt</button>
+      <div id="prAddWrap" class="hidden card">
+        <h2 class="text-lg font-semibold mb-3"><i class="fas fa-sitemap mr-2 text-blue-500"></i>Projekti</h2>
+        <div class="flex gap-2 mb-3">
+          <input id="admProjectName" class="flex-1" placeholder="Dodaj nov projekt" />
+          <button id="admAddProject" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+        </div>
+        <ul id="admProjectList" class="space-y-2 text-sm"></ul>
       </div>
-    </div>
 
     <!-- mreža map -->
     <div id="prGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
     <p id="prEmpty" class="text-sm mt-2 hidden" style="color:var(--muted)">Ni projektov.</p>
   </div>
 </section>
+  
 
 <!-- Modal projekta: datoteke + media iz dnevnikov -->
 <div id="projectModal" class="fixed inset-0 z-[120] hidden">
@@ -914,15 +918,6 @@ input[type="checkbox"]:checked::after{
         </div>
         <ul id="admUserList" class="space-y-2 text-sm"></ul>
       </div>
-
-      <div class="card">
-        <h2 class="text-lg font-semibold mb-3"><i class="fas fa-sitemap mr-2 text-blue-500"></i>Projekti</h2>
-        <div class="flex gap-2 mb-3">
-          <input id="admProjectName" class="flex-1" placeholder="Dodaj nov projekt" />
-          <button id="admAddProject" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-        </div>
-        <ul id="admProjectList" class="space-y-2 text-sm"></ul>
-      </div>
     </div>
   </section>
 
@@ -1161,11 +1156,20 @@ function renderEmployeesFilter(){
 function renderJournalsFilters(){
   const je = document.getElementById('jnEmployee'); if(!je) return;
   const emails = Object.keys(usersDir);
+const tp = document.getElementById('todoProject');
+if (tp){ tp.innerHTML = projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join(''); }
   je.innerHTML = '<option value="">Vsi</option>' + emails
     .map(e=>({email:e, name: usersDir[e]?.name || e}))
     .sort((a,b)=>a.name.localeCompare(b.name))
     .map(u=>`<option value="${u.email}">${u.name}</option>`).join('');
 }
+
+function fillProjectsSelect(id){
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+}
+
 
 /* ===== helperji ===== */
 function setDefaultRange(fromEl, toEl){
