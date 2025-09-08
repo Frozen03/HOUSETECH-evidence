@@ -1008,6 +1008,22 @@ async function handleGoogleCredentialResponse(response){
   }
 }
 
+async function fetchJSON(url, { method='GET', headers={}, body } = {}) {
+    const h = { Authorization: 'Bearer ' + (accessToken || ''), ...headers };
+    let b = body;
+    if (b && !(b instanceof FormData)) { h['Content-Type'] = 'application/json'; b = JSON.stringify(b); }
+    const res = await fetch(API_BASE + url, { method, headers: h, body: b });
+
+    if (res.status === 401) {
+      // neveljaven JWT → odjavi
+      localStorage.removeItem('jwt'); localStorage.removeItem('me');
+      accessToken = null; me = null; showLoggedOut();
+      throw new Error('401 Unauthorized');
+    }
+    const data = await res.json().catch(()=> ({}));
+    return res.ok ? data : { error: data.error || res.statusText };
+  }
+
 function initGoogle(){
   if(!(window.google && google.accounts && google.accounts.id)) return false;
   try{
