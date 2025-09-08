@@ -202,23 +202,30 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
 
 
 // MEDIA (slike/video) iz dnevnikov po projektu
-app.get("/uploads", authRequired, (req, res) => {
+app.get("/projects/:id/media", authRequired, (req, res) => {
   const id = req.params.id;
+
   const list = jobs
     .filter(j => j.projectId === id)
-    .flatMap(j => Array.isArray(j.photos)
-      ? j.photos.map(ph => ({ ...ph, __jts: j.ts, __jmail: j.email }))
-      : [])
-    .filter(ph => typeof ph?.url === "string" &&
-                 (((ph.type || "").startsWith("image/")) ||
-                  ((ph.type || "").startsWith("video/"))))
+    .flatMap(j =>
+      Array.isArray(j.photos)
+        ? j.photos.map(ph => ({ ...ph, __jts: j.ts, __jmail: j.email }))
+        : []
+    )
+    .filter(ph =>
+      typeof ph?.url === "string" &&
+      (((ph.type || ph.mime || "").startsWith("image/")) ||
+       ((ph.type || ph.mime || "").startsWith("video/")))
+    )
     .map(ph => ({
       id:   ph.id  || crypto.randomUUID(),
       url:  ph.url,
-      type: ph.type || "image/*",
+      type: ph.type || ph.mime || "image/*",
       ts:   ph.ts   || ph.__jts   || Date.now(),
       by:   ph.by   || ph.__jmail || ""
-    }));
+    }))
+    .sort((a,b) => b.ts - a.ts);
+
   res.json(list);
 });
 
