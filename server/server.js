@@ -34,11 +34,11 @@ const P = {
   presence:   path.join(DATA_DIR, "presence.json"),
   jobs:       path.join(DATA_DIR, "jobs.json"),
   workplans:  path.join(DATA_DIR, "workplans"),
-  P.todos = path.join(DATA_DIR, "todos.json"),
-  P.projUploads = path.join(DATA_DIR, "uploads", "projects"),
-  fs.mkdirSync(P.projUploads, { recursive: true });
+  todos:      path.join(DATA_DIR, "todos.json"),
+  projUploads:path.join(DATA_DIR, "uploads", "projects"),
 };
-fs.mkdirSync(P.workplans, { recursive: true });
+fs.mkdirSync(P.workplans,   { recursive: true });
+fs.mkdirSync(P.projUploads, { recursive: true });
 
 function readJSON(file, fallback) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; } }
 function writeJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
@@ -206,9 +206,19 @@ app.get("/projects/:id/media", authRequired, (req, res) => {
   const id = req.params.id;
   const list = jobs
     .filter(j => j.projectId === id)
-    .flatMap(j => (Array.isArray(j.photos) ? j.photos : []))
-    .filter(ph => typeof ph?.url === "string" && (ph.type||"").startsWith("image/") || (ph.type||"").startsWith("video/"))
-    .map(ph => ({ id: ph.id || crypto.randomUUID(), url: ph.url, type: ph.type || "image/*", ts: ph.ts || j?.ts || Date.now(), by: ph.by || j?.email || "" }));
+    .flatMap(j => Array.isArray(j.photos)
+      ? j.photos.map(ph => ({ ...ph, __jts: j.ts, __jmail: j.email }))
+      : [])
+    .filter(ph => typeof ph?.url === "string" &&
+                 (((ph.type || "").startsWith("image/")) ||
+                  ((ph.type || "").startsWith("video/"))))
+    .map(ph => ({
+      id:   ph.id  || crypto.randomUUID(),
+      url:  ph.url,
+      type: ph.type || "image/*",
+      ts:   ph.ts   || ph.__jts   || Date.now(),
+      by:   ph.by   || ph.__jmail || ""
+    }));
   res.json(list);
 });
 
