@@ -202,7 +202,7 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
 
 
 // MEDIA (slike/video) iz dnevnikov po projektu
-app.get("/projects/:id/media", authRequired, (req, res) => {
+app.get("/uploads", authRequired, (req, res) => {
   const id = req.params.id;
   const list = jobs
     .filter(j => j.projectId === id)
