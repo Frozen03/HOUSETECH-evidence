@@ -5,7 +5,13 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
+    "dev": "nodemon server/server.js",
+    "build": "echo \"Using /web as webDir for Capacitor (no bundling needed)\"",
+    "cap.copy": "npx cap copy",
+    "cap.sync": "npx cap sync",
+    "cap.android": "npx cap open android",
+    "cap.ios": "npx cap open ios",
+    "cap.do": "npm run build && npx cap sync"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -13,9 +19,14 @@
     "express": "^4.19.2",
     "google-auth-library": "^9.14.1",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "@capgo/capacitor-social-login": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/ios": "^7.0.0"
   }
 }
