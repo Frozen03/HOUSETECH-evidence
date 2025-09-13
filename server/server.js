@@ -508,7 +508,20 @@ app.get("/reports/summary", authRequired, async (req, res) => {
 
 // ===== LEAVES (Dopusti/Bolniške) =====
 
-// Uporabnik pošlje prošnjo
+// ====== ADDON: leaves + holidays + summary ======
+const P2 = {
+  leaves:     path.join(DATA_DIR, "leaves.json"),
+  holidays:   path.join(DATA_DIR, "holidays.json"),
+};
+let leaves    = readJSON(P2.leaves, []);
+let holidays  = readJSON(P2.holidays, []);
+const saveLeaves   = () => writeJSON(P2.leaves, leaves);
+const saveHolidays = () => writeJSON(P2.holidays, holidays);
+
+// create data dir files if needed
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
+// Create/Request leave or sick leave
 app.post("/leaves", authRequired, (req, res) => {
   const { type, from, to, reason } = req.body || {};
   if (!['leave','sick'].includes(type || '')) return res.status(400).json({ error: "type mora biti 'leave' ali 'sick'" });
@@ -526,7 +539,7 @@ app.post("/leaves", authRequired, (req, res) => {
   res.status(201).json(item);
 });
 
-// Pregled prošenj (managerji vidijo vse, ostali svoje)
+// List leaves (managerji vidijo vse, ostali svoje)
 app.get("/leaves", authRequired, (req, res) => {
   const { status } = req.query || {};
   const isMgr = hasManagerRole(req.user);
@@ -536,7 +549,7 @@ app.get("/leaves", authRequired, (req, res) => {
   res.json(list);
 });
 
-// Odobri / zavrni (Owner/CEO/vodja)
+// Approve / reject (Owner/CEO/vodja)
 app.patch("/leaves/:id", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res) => {
   const id = req.params.id;
   const { status } = req.body || {};
@@ -550,64 +563,52 @@ app.patch("/leaves/:id", authRequired, requireRole(["Owner","CEO","vodja"]), (re
   res.json(leaves[i]);
 });
 
-// ===== HOLIDAYS =====
+// Holidays
 app.get("/holidays", authRequired, (req,res)=> res.json(holidays));
 app.put("/holidays", authRequired, requireRole(["Owner","CEO"]), (req,res)=>{
   const arr = Array.isArray(req.body) ? req.body : [];
-  holidays = arr.filter(h => typeof h?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
+  holidays = arr.filter(h => typeof h?.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(h.date));
   saveHolidays();
   res.json({ ok:true, count: holidays.length });
 });
 
-// ===== SUMMARY (Skupne ure + dopust/bolniška/prazniki) =====
-function dateRangeDays(fromISO, toISO){
-  const d0 = new Date(fromISO + 'T00:00:00Z');
-  const d1 = new Date((toISO || fromISO) + 'T00:00:00Z');
-  const days = [];
-  for(let d=new Date(d0); d<=d1; d.setUTCDate(d.getUTCDate()+1)){
-    days.push(d.toISOString().slice(0,10));
-  }
-  return days;
-}
-function isWeekday(iso){ const wd = new Date(iso+'T00:00:00Z').getUTCDay(); return wd>=1 && wd<=5; }
-
+// Summary for KPI
 app.get("/me/summary", authRequired, async (req,res)=>{
   try{
-    const from = Number(req.query.from || 0);
-    const to   = Number(req.query.to   || Date.now());
+    const fromMs = Number(req.query.from || 0);
+    const toMs   = Number(req.query.to   || Date.now());
+    const rangeFromISO = new Date(fromMs).toISOString().slice(0,10);
+    const rangeToISO   = new Date(toMs).toISOString().slice(0,10);
     const me = req.user.email;
 
-    const jobsList = jobs
-      .filter(j => j.ts >= from && j.ts <= to)
-      .filter(j => j.email === me);
+    const jobsList = jobs.filter(j => j.ts >= fromMs && j.ts <= toMs && j.email === me);
     const workHours = jobsList.reduce((s,j)=> s + (Number(j.hours)||0), 0);
 
-    const leavesMine = leaves.filter(l => l.email === me);
-    const rangeFromISO = new Date(from).toISOString().slice(0,10);
-    const rangeToISO   = new Date(to).toISOString().slice(0,10);
-    const inRangeDays = (f,t)=> dateRangeDays(f,t).filter(isWeekday);
+    const isWeekday = (iso)=>{ const wd=new Date(iso+'T00:00:00Z').getUTCDay(); return wd>=1 && wd<=5; };
+    const clip = (a,b,c,d)=>{ const from = a>b? a:b; const to = c<d? c:d; return from<=to ? [from,to] : null; };
+    const daysBetween = (fromISO,toISO)=>{ const out=[]; let d=new Date(fromISO+'T00:00:00Z'); const end=new Date(toISO+'T00:00:00Z'); for(; d<=end; d.setUTCDate(d.getUTCDate()+1)) out.push(d.toISOString().slice(0,10)); return out; };
 
-    const approved = leavesMine.filter(l => l.status === 'approved');
-    const sickDays = approved.filter(l => l.type==='sick').flatMap(l => inRangeDays(l.from, l.to));
-    const leaveDays = approved.filter(l => l.type==='leave').flatMap(l => inRangeDays(l.from, l.to));
+    const mine = (leaves||[]).filter(l => l.email === me && l.status === 'approved');
+    let sickHours=0, leaveHours=0;
+    for(const l of mine){
+      const Lfrom = l.from, Lto = l.to || l.from;
+      const inter = clip(Lfrom, rangeFromISO, Lto, rangeToISO);
+      if(!inter) continue;
+      const [f,t] = inter;
+      const ds = daysBetween(f,t).filter(isWeekday).length;
+      if(l.type==='sick') sickHours += ds*8;
+      else if(l.type==='leave') leaveHours += ds*8;
+    }
 
-    const sickHours   = sickDays.length * 8;
-    const leaveHours  = leaveDays.length * 8;
+    const holSet = new Set((holidays||[]).map(h=>h.date));
+    const allDays = daysBetween(rangeFromISO, rangeToISO);
+    const holidayHours = allDays.filter(d => holSet.has(d) && isWeekday(d)).length * 8;
 
-    const holidaysSet = new Set(holidays.map(h=>h.date).filter(isWeekday));
-    const allDaysInQuery = dateRangeDays(rangeFromISO, rangeToISO);
-    const holidayCountInRange = allDaysInQuery.filter(d => holidaysSet.has(d)).length;
-    const holidayHours = holidayCountInRange * 8;
-
-    res.json({
-      workHours: Math.round(workHours*100)/100,
-      leaveHours, sickHours, holidayHours
-    });
-  }catch(e){
-    console.error("GET /me/summary error:", e);
-    res.status(500).json({ error:"Napaka pri povzetku" });
-  }
+    res.json({ workHours: Math.round(workHours*100)/100, leaveHours, sickHours, holidayHours });
+  }catch(e){ console.error("GET /me/summary error:", e); res.status(500).json({ error:"Napaka pri povzetku" }); }
 });
+// ====== END ADDON ======
+
 
 // ===== JOBS =====
 function isProjectLocked(projectId){
