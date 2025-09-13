@@ -447,6 +447,53 @@ input[type="checkbox"]:checked::after{
 </div>
   </section>
 
+<!-- MODAL: Dopust -->
+<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Prošnja za dopust</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bolniška -->
+<div id="sickModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ===== Projekti ===== -->
 <section id="tab-projects" class="hidden section-center">
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -2759,56 +2806,6 @@ async function renderJournals(){
     </div>`).join('') || `<div class='text-sm italic' style="color:var(--muted)">Ni dnevnikov.</div>`;
 }
 
-/* ===== Sign out clears ===== */
-</script>
-
-<!-- MODAL: Dopust -->
-<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
-  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
-  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
-      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
-      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Prošnja za dopust</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
-        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
-      </div>
-      <div class="mt-2">
-        <label class="block text-sm mb-1">Opomba</label>
-        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 mt-3">
-        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
-        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Bolniška -->
-<div id="sickModal" class="fixed inset-0 z-[130] hidden">
-  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
-  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
-      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
-      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
-        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
-      </div>
-      <div class="mt-2">
-        <label class="block text-sm mb-1">Opomba</label>
-        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 mt-3">
-        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
-        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
 async function refreshAuthKpis(){
   if(!accessToken) return;
 
@@ -2820,8 +2817,8 @@ async function refreshAuthKpis(){
     to   = new Date(tEl.value).getTime() + 86399999;
   } else {
     const now=new Date();
-    const f=new Date(now.getFullYear(), now.getMonth(), 5);
-    const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+    const f=new Date(now.getFullYear(), now.getMonth(), 6);
+    const t=new Date(now.getFullYear(), now.getMonth()+1, 6);
     from = f.getTime();
     to   = t.getTime() + 86399999;
   }
@@ -3004,6 +3001,8 @@ async function loadMonthLeavesAndHolidays(){
     (hol||[]).forEach(h => { if(h?.date) holidaysSet.add(h.date); });
   }catch(e){ /* ignore */ }
 }
+
+/* ===== Sign out clears ===== */
 </script>
 
 </body>
