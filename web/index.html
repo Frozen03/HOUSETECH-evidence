@@ -2732,7 +2732,7 @@ async function renderJournals(){
 
 /* ===== Sign out clears ===== */
 
-<script>
+
 function refreshLeavesBadge(){
   const badge = document.getElementById('leavesTabBadge');
   const btn = document.getElementById('tabBtnLeaves');
@@ -2748,9 +2748,9 @@ function refreshLeavesBadge(){
       else { badge.classList.add('hidden'); }
     }).catch(()=>{});
 }
-</script>
 
-<script>
+
+
 function ymdLocal(d){ const y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), da=('0'+d.getDate()).slice(-2); return `${y}-${m}-${da}`; }
 function parseISODateLocal(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
 
@@ -2801,7 +2801,6 @@ async function loadMonthLeavesAndHolidays(){
     (hol||[]).forEach(h=>{ if(h?.date) holidaysSet.add(h.date); });
   }catch(e){}
 }
-</script>
 </script>
 </body>
 </html>
