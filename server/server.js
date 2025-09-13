@@ -1,4 +1,4 @@
-// server.js — POPRAVLJENO: express.json + cors + persistenca + vsi API-ji
+// server.js — POPRAVLJENO in POENOTENO
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -11,17 +11,18 @@ const crypto = require("crypto");
 
 const app = express();
 
+// ---- config ----
 const PORT = process.env.PORT || 8787;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
-// ===== middleware (manjkalo!) =====
+// ---- middleware ----
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json({ limit: "10mb" }));
 
-// ===== persistenca =====
-const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "../data"); // na Renderju npr. /data
+// ---- persistenca ----
+const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "../data");
 const WEB_DIR  = process.env.WEB_DIR  || path.resolve(__dirname, "../web");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -49,11 +50,10 @@ let users     = readJSON(P.users, {});
 let projects  = readJSON(P.projects, []);
 let materials = readJSON(P.materials, []);
 let presence  = readJSON(P.presence, []);
-let jobs      = readJSON(P.jobs, [])
+let jobs      = readJSON(P.jobs, []);
 let leaves    = readJSON(P.leaves, []);
-let holidays  = readJSON(P.holidays, []);;
-let todos = readJSON(P.todos, []);     
-const saveTodos = () => writeJSON(P.todos, todos);
+let holidays  = readJSON(P.holidays, []);
+let todos     = readJSON(P.todos, []);
 
 const saveUsers     = () => writeJSON(P.users, users);
 const saveProjects  = () => writeJSON(P.projects, projects);
@@ -62,12 +62,13 @@ const savePresence  = () => writeJSON(P.presence, presence);
 const saveJobs      = () => writeJSON(P.jobs, jobs);
 const saveLeaves    = () => writeJSON(P.leaves, leaves);
 const saveHolidays  = () => writeJSON(P.holidays, holidays);
+const saveTodos     = () => writeJSON(P.todos, todos);
 
-// ===== Google OAuth =====
+// ---- Google OAuth ----
 if (!GOOGLE_CLIENT_ID) console.warn("⚠️ GOOGLE_CLIENT_ID manjka – prijava ne bo delovala.");
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
-// ===== JWT helperji =====
+// ---- JWT/helperji ----
 function signJWT(email, roles) { return jwt.sign({ sub: email, roles: roles || [] }, JWT_SECRET, { expiresIn: "7d" }); }
 function authRequired(req, res, next) {
   try {
@@ -93,7 +94,7 @@ function hasManagerRole(user) {
   return roles.includes("Owner") || roles.includes("CEO") || roles.includes("vodja");
 }
 
-// ===== upload =====
+// ---- upload ----
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(DATA_DIR, "uploads")),
   filename: (req, file, cb) => cb(null, crypto.randomUUID() + (path.extname(file.originalname || "").toLowerCase() || "")),
@@ -112,7 +113,7 @@ const projStorage = multer.diskStorage({
 });
 const projUpload = multer({ storage: projStorage, limits: { fileSize: 100 * 1024 * 1024, files: 20 } });
 
-// ===== auth =====
+// ---- auth ----
 app.post("/auth/google/verify", async (req, res) => {
   try {
     const { credential } = req.body || {};
@@ -134,7 +135,7 @@ app.post("/auth/google/verify", async (req, res) => {
   }
 });
 
-// ===== USERS =====
+// ---- USERS ----
 app.get("/users", authRequired, (req, res) => res.json(users));
 
 app.post("/users", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
@@ -165,11 +166,10 @@ app.delete("/users/:email", authRequired, requireRole(["Owner", "CEO"]), (req, r
   res.status(204).end();
 });
 
-// ===== PROJECTS =====
+// ---- PROJECTS ----
 app.get("/projects", authRequired, (req, res) => {
   const isMgr = hasManagerRole(req.user);
   if (isMgr) return res.json(projects);
-  // zaposleni vidijo le odklenjene
   return res.json(projects.filter(p => !p.locked));
 });
 
@@ -183,7 +183,6 @@ app.post("/projects", authRequired, requireRole(["Owner", "CEO"]), (req, res) =>
   res.status(201).json(proj);
 });
 
-// PATCH za preimenovanje / naslov / zaklep
 app.patch("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, res) => {
   const id = req.params.id;
   const i = projects.findIndex(p => p.id === id);
@@ -206,32 +205,21 @@ app.delete("/projects/:id", authRequired, requireRole(["Owner", "CEO"]), (req, r
   res.status(204).end();
 });
 
-
 // MEDIA (slike/video) iz dnevnikov po projektu
 app.get("/projects/:id/media", authRequired, (req, res) => {
   const id = req.params.id;
-
   const list = jobs
     .filter(j => j.projectId === id)
-    .flatMap(j =>
-      Array.isArray(j.photos)
-        ? j.photos.map(ph => ({ ...ph, __jts: j.ts, __jmail: j.email }))
-        : []
-    )
-    .filter(ph =>
-      typeof ph?.url === "string" &&
-      (((ph.type || ph.mime || "").startsWith("image/")) ||
-       ((ph.type || ph.mime || "").startsWith("video/")))
-    )
+    .flatMap(j => Array.isArray(j.photos) ? j.photos.map(ph => ({ ...ph, __jts: j.ts, __jmail: j.email })) : [])
+    .filter(ph => typeof ph?.url === "string" && (((ph.type || ph.mime || "").startsWith("image/")) || ((ph.type || ph.mime || "").startsWith("video/"))))
     .map(ph => ({
-      id:   ph.id  || crypto.randomUUID(),
-      url:  ph.url,
+      id: ph.id || crypto.randomUUID(),
+      url: ph.url,
       type: ph.type || ph.mime || "image/*",
-      ts:   ph.ts   || ph.__jts   || Date.now(),
-      by:   ph.by   || ph.__jmail || ""
+      ts: ph.ts || ph.__jts || Date.now(),
+      by: ph.by || ph.__jmail || ""
     }))
     .sort((a,b) => b.ts - a.ts);
-
   res.json(list);
 });
 
@@ -254,16 +242,7 @@ app.post("/projects/:id/files", authRequired, requireRole(["Owner","CEO","vodja"
 
   const items = (req.files || []).map(f => {
     const url = `/uploads/projects/${req.params.id}/${f.filename}`;
-    const meta = {
-      id: crypto.randomUUID(),
-      filename: f.filename,
-      originalName: f.originalname,
-      type: f.mimetype,
-      size: f.size,
-      url,
-      by: req.user.email,
-      ts: Date.now()
-    };
+    const meta = { id: crypto.randomUUID(), filename: f.filename, originalName: f.originalname, type: f.mimetype, size: f.size, url, by: req.user.email, ts: Date.now() };
     p.files.push(meta);
     return meta;
   });
@@ -287,13 +266,11 @@ app.delete("/projects/:id/files/:fid", authRequired, requireRole(["Owner","CEO",
   res.status(204).end();
 });
 
-
-// ToDo – seznam
+// ---- ToDo ----
 app.get("/projects/:id/todos", authRequired, requireRole(["Owner","CEO","vodja"]), (req, res) => {
   res.json(todos.filter(t=>t.projectId===req.params.id).sort((a,b)=>a.ts-b.ts));
 });
 
-// ToDo – dodaj
 app.post("/projects/:id/todos", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
   const text = String(req.body?.text||"").trim();
   if(!text) return res.status(400).json({ error: "Manjka text" });
@@ -302,7 +279,6 @@ app.post("/projects/:id/todos", authRequired, requireRole(["Owner","CEO","vodja"
   res.status(201).json(item);
 });
 
-// ToDo – spremeni
 app.patch("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
   const i = todos.findIndex(t=>t.id===req.params.tid && t.projectId===req.params.id);
   if(i===-1) return res.status(404).json({ error:"Ni naloge" });
@@ -313,7 +289,6 @@ app.patch("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO","
   res.json(todos[i]);
 });
 
-// ToDo – izbriši
 app.delete("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res)=>{
   const before = todos.length;
   todos = todos.filter(t=>!(t.id===req.params.tid && t.projectId===req.params.id));
@@ -322,8 +297,7 @@ app.delete("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO",
   res.status(204).end();
 });
 
-
-// ===== MATERIALS =====
+// ---- MATERIALS ----
 app.get("/materials", authRequired, (req, res) => res.json(materials));
 
 app.post("/materials", authRequired, (req, res) => {
@@ -342,7 +316,7 @@ app.post("/materials", authRequired, (req, res) => {
   res.status(201).json(m);
 });
 
-// ===== PRESENCE =====
+// ---- PRESENCE ----
 app.post("/presence", authRequired, (req, res) => {
   const { type, projectId, ts } = req.body || {};
   const ok = ["in", "out", "break-start", "break-end"];
@@ -380,13 +354,9 @@ app.delete("/presence/:id", authRequired, (req, res) => {
   res.status(204).end();
 });
 
-// ===== REPORTS =====
-
-// helper: parsa IN/OUT/break v efektivne ure
+// ---- REPORTS ----
 function computePresenceHours(records){
-  // records: vse prisotnosti znotraj časovnega okna (že filtrirane)
-  // vrača { byProject:{[projectId]: hours}, byEmployee:{[email]: hours}, rows:[{date,projectId,email,hours}] }
-  const byKey = {}; // ključ: date|email|projectId -> array of events
+  const byKey = {};
   for(const r of records){
     const d = new Date(r.ts);
     const date = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0,10);
@@ -446,39 +416,30 @@ app.get("/reports/summary", authRequired, async (req, res) => {
     const isMgr = hasManagerRole(req.user);
     const myEmail = req.user.email;
 
-    // Presence
     let pres = presence
       .filter(p => p.ts >= from && p.ts <= to)
       .filter(p => !projectId || p.projectId === projectId)
       .filter(p => !email || p.email === email);
 
-    // Jobs
     let jlist = jobs
       .filter(j => j.ts >= from && j.ts <= to)
       .filter(j => !projectId || j.projectId === projectId)
       .filter(j => !email || j.email === email);
 
-    // Filtri za zaposlene (zaklenjeni projekti + samo njihove zadeve)
     if (!isMgr){
-      pres = pres
-        .filter(p => p.email === myEmail)
-        .filter(p => {
-          if (!p.projectId) return true;
-          const pr = projects.find(x => x.id === p.projectId);
-          return !(pr && pr.locked);
-        });
-
-      jlist = jlist
-        .filter(j => j.email === myEmail)
-        .filter(j => {
-          const pr = projects.find(x => x.id === j.projectId);
-          return !(pr && pr.locked);
-        });
+      pres = pres.filter(p => p.email === myEmail).filter(p => {
+        if (!p.projectId) return true;
+        const pr = projects.find(x => x.id === p.projectId);
+        return !(pr && pr.locked);
+      });
+      jlist = jlist.filter(j => j.email === myEmail).filter(j => {
+        const pr = projects.find(x => x.id === j.projectId);
+        return !(pr && pr.locked);
+      });
     }
 
     const presAgg = computePresenceHours(pres);
 
-    // Jobs aggregations
     const jobsByProject = {};
     const jobsByEmployee = {};
     jlist.forEach(j => {
@@ -487,16 +448,8 @@ app.get("/reports/summary", authRequired, async (req, res) => {
     });
 
     res.json({
-      presence: {
-        byProject: presAgg.byProject,
-        byEmployee: presAgg.byEmployee,
-        rows: presAgg.rows
-      },
-      jobs: {
-        byProject: jobsByProject,
-        byEmployee: jobsByEmployee,
-        rows: jlist.map(j => ({ date: new Date(j.ts).toISOString().slice(0,10), projectId: j.projectId, email: j.email, activity: j.activity, hours: Number(j.hours||0) }))
-      }
+      presence: { byProject: presAgg.byProject, byEmployee: presAgg.byEmployee, rows: presAgg.rows },
+      jobs: { byProject: jobsByProject, byEmployee: jobsByEmployee, rows: jlist.map(j => ({ date: new Date(j.ts).toISOString().slice(0,10), projectId: j.projectId, email: j.email, activity: j.activity, hours: Number(j.hours||0) })) }
     });
   }catch(e){
     console.error("GET /reports/summary error:", e);
@@ -504,42 +457,32 @@ app.get("/reports/summary", authRequired, async (req, res) => {
   }
 });
 
+// ---- LEAVES / HOLIDAYS ----
 
+// SI holidays helpers
+function easterSunday(year){
+  const f=Math.floor; const a=year%19; const b=f(year/100); const c=year%100;
+  const d=f(b/4); const e=b%4; const g=f((8*b+13)/25); const h=(19*a+b-d-g+15)%30;
+  const i=f(c/4); const k=c%4; const l=(32+2*e+2*i-h-k)%7; const m=f((a+11*h+22*l)/451);
+  const month=f((h+l-7*m+114)/31); const day=((h+l-7*m+114)%31)+1; return new Date(year, month-1, day);
+}
+function siHolidays(year){
+  const H = new Set();
+  const add = (d)=>{ const wd = d.getDay(); if(wd>=1 && wd<=5) H.add(d.toISOString().slice(0,10)); };
+  [[1,1],[1,2],[2,8],[4,27],[5,1],[5,2],[6,25],[8,15],[10,31],[11,1],[12,25],[12,26]].forEach(([m,da])=> add(new Date(year, m-1, da)));
+  const e = easterSunday(year); const em = new Date(e); em.setDate(e.getDate()+1); add(em);
+  return Array.from(H).sort().map(d => ({ date: d, name: "Praznik" }));
+}
 
-// ===== LEAVES (Dopusti/Bolniške) =====
-
-// ====== ADDON: leaves + holidays + summary ======
-const P2 = {
-  leaves:     path.join(DATA_DIR, "leaves.json"),
-  holidays:   path.join(DATA_DIR, "holidays.json"),
-};
-let leaves    = readJSON(P2.leaves, []);
-let holidays  = readJSON(P2.holidays, []);
-const saveLeaves   = () => writeJSON(P2.leaves, leaves);
-const saveHolidays = () => writeJSON(P2.holidays, holidays);
-
-// create data dir files if needed
-fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// Create/Request leave or sick leave
 app.post("/leaves", authRequired, (req, res) => {
   const { type, from, to, reason } = req.body || {};
   if (!['leave','sick'].includes(type || '')) return res.status(400).json({ error: "type mora biti 'leave' ali 'sick'" });
   if (!from) return res.status(400).json({ error: "Manjka 'from' (YYYY-MM-DD)" });
-  const item = {
-    id: crypto.randomUUID(),
-    email: req.user.email,
-    name: (users[req.user.email]?.name) || req.user.email,
-    type, from, to: to || from,
-    reason: String(reason||'').slice(0, 500),
-    status: 'pending',
-    ts: Date.now()
-  };
+  const item = { id: crypto.randomUUID(), email: req.user.email, name: (users[req.user.email]?.name) || req.user.email, type, from, to: to || from, reason: String(reason||'').slice(0, 500), status: 'pending', ts: Date.now() };
   leaves.push(item); saveLeaves();
   res.status(201).json(item);
 });
 
-// List leaves (managerji vidijo vse, ostali svoje)
 app.get("/leaves", authRequired, (req, res) => {
   const { status } = req.query || {};
   const isMgr = hasManagerRole(req.user);
@@ -549,7 +492,6 @@ app.get("/leaves", authRequired, (req, res) => {
   res.json(list);
 });
 
-// Approve / reject (Owner/CEO/vodja)
 app.patch("/leaves/:id", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res) => {
   const id = req.params.id;
   const { status } = req.body || {};
@@ -563,16 +505,22 @@ app.patch("/leaves/:id", authRequired, requireRole(["Owner","CEO","vodja"]), (re
   res.json(leaves[i]);
 });
 
-// Holidays
-app.get("/holidays", authRequired, (req,res)=> res.json(holidays));
+// holidays: če ni shranjenih, vrni auto za tekoče leto
+app.get("/holidays", authRequired, (req,res)=> {
+  let out = holidays;
+  if (!Array.isArray(out) || out.length === 0){
+    const y = new Date().getFullYear();
+    out = siHolidays(y);
+  }
+  res.json(out);
+});
 app.put("/holidays", authRequired, requireRole(["Owner","CEO"]), (req,res)=>{
   const arr = Array.isArray(req.body) ? req.body : [];
-  holidays = arr.filter(h => typeof h?.date === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(h.date));
+  holidays = arr.filter(h => typeof h?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
   saveHolidays();
   res.json({ ok:true, count: holidays.length });
 });
 
-// Summary for KPI
 app.get("/me/summary", authRequired, async (req,res)=>{
   try{
     const fromMs = Number(req.query.from || 0);
@@ -600,17 +548,16 @@ app.get("/me/summary", authRequired, async (req,res)=>{
       else if(l.type==='leave') leaveHours += ds*8;
     }
 
-    const holSet = new Set((holidays||[]).map(h=>h.date));
+    const holList = (holidays && holidays.length>0) ? holidays : siHolidays(new Date(rangeFromISO).getFullYear());
+    const holSet = new Set(holList.map(h=>h.date));
     const allDays = daysBetween(rangeFromISO, rangeToISO);
     const holidayHours = allDays.filter(d => holSet.has(d) && isWeekday(d)).length * 8;
 
     res.json({ workHours: Math.round(workHours*100)/100, leaveHours, sickHours, holidayHours });
   }catch(e){ console.error("GET /me/summary error:", e); res.status(500).json({ error:"Napaka pri povzetku" }); }
 });
-// ====== END ADDON ======
 
-
-// ===== JOBS =====
+// ---- JOBS ----
 function isProjectLocked(projectId){
   if (!projectId) return false;
   const p = projects.find(x => x.id === projectId);
@@ -626,7 +573,6 @@ function upsertMaterialsFromLogs(mats){
     const uom  = String(m?.uom||"kos").trim() || "kos";
     const hit = materials.find(x => (x.name||"").toLowerCase() === name.toLowerCase());
     if (hit){
-      // če je uom nov, ga posodobi (ne rušimo ID)
       if (uom && uom !== hit.uom){ hit.uom = uom; changed = true; }
     }else{
       materials.push({ id: crypto.randomUUID(), name, uom });
@@ -636,12 +582,10 @@ function upsertMaterialsFromLogs(mats){
   if (changed) saveMaterials();
 }
 
-
 app.post("/jobs", authRequired, (req, res) => {
   const { projectId, activity, hours, materials: mats, photos } = req.body || {};
   if (!projectId || !activity) return res.status(400).json({ error: "Manjka projectId ali activity" });
 
-  // zaposleni/študent ne sme v zaklenjen projekt
   const isMgr = hasManagerRole(req.user);
   if (!isMgr && isProjectLocked(projectId)) {
     return res.status(403).json({ error: "Projekt je zaklenjen." });
@@ -649,17 +593,7 @@ app.post("/jobs", authRequired, (req, res) => {
 
   const email = req.user.email;
   const employee = users[email]?.name || email;
-  const item = {
-    id: crypto.randomUUID(),
-    projectId,
-    activity: String(activity).trim(),
-    hours: Number(hours || 0),
-    materials: Array.isArray(mats) ? mats : [],
-    photos: Array.isArray(photos) ? photos : [],
-    email,
-    employee,
-    ts: Date.now()
-  };
+  const item = { id: crypto.randomUUID(), projectId, activity: String(activity).trim(), hours: Number(hours || 0), materials: Array.isArray(mats) ? mats : [], photos: Array.isArray(photos) ? photos : [], email, employee, ts: Date.now() };
   jobs.push(item);
   saveJobs();
   upsertMaterialsFromLogs(item.materials);
@@ -675,17 +609,11 @@ app.get("/jobs", authRequired, (req, res) => {
   const isMgr = hasManagerRole(req.user);
   const myEmail = req.user.email;
 
-  let list = jobs
-    .filter(j => j.ts >= from && j.ts <= to)
-    .filter(j => !projectId || j.projectId === projectId);
+  let list = jobs.filter(j => j.ts >= from && j.ts <= to).filter(j => !projectId || j.projectId === projectId);
 
-  // zaposleni: vidijo le svoje in ne-locked projekte
   if (!isMgr) {
-    list = list
-      .filter(j => j.email === myEmail)
-      .filter(j => !isProjectLocked(j.projectId));
+    list = list.filter(j => j.email === myEmail).filter(j => !isProjectLocked(j.projectId));
   } else {
-    // managerji lahko še dodatno filtrirajo po emailu
     if (emailQ) list = list.filter(j => j.email === emailQ);
   }
 
@@ -706,7 +634,6 @@ app.put("/jobs/:id", authRequired, (req, res) => {
 
     const { projectId, activity, hours, materials: mats, photos } = req.body || {};
 
-    // če ni manager, ne dovoli prestavit v zaklenjen projekt
     if (!admin && projectId && isProjectLocked(projectId)) {
       return res.status(403).json({ error: "Projekt je zaklenjen." });
     }
@@ -746,21 +673,13 @@ app.delete("/jobs/:id", authRequired, (req, res) => {
   }
 });
 
-
-
-
-// ===== upload fotografij =====
+// ---- upload fotografij ----
 app.post("/upload", authRequired, upload.array("photos", 10), (req, res) => {
-  const files = (req.files || []).map(f => ({
-    url: `/uploads/${f.filename}`,
-    name: f.originalname || f.filename,
-    size: f.size,
-    mime: f.mimetype
-  }));
+  const files = (req.files || []).map(f => ({ url: `/uploads/${f.filename}`, name: f.originalname || f.filename, size: f.size, mime: f.mimetype }));
   res.json({ files });
 });
 
-// ===== helper: normalizacija people -> email =====
+// ---- helper: normalizacija people -> email ----
 function toEmailLike(val) {
   if (!val) return val;
   const s = String(val).trim();
@@ -770,7 +689,7 @@ function toEmailLike(val) {
   return hit ? hit[0].toLowerCase() : s;
 }
 
-// ===== Workplan (mesečni plan) =====
+// ---- Workplan (mesečni plan) ----
 app.get("/workplan/month", authRequired, (req, res) => {
   try {
     const { start } = req.query;
@@ -781,10 +700,7 @@ app.get("/workplan/month", authRequired, (req, res) => {
       const raw = JSON.parse(fs.readFileSync(planFile, "utf8"));
       if (raw && raw.days) {
         for (const dayKey of Object.keys(raw.days)) {
-          raw.days[dayKey] = (raw.days[dayKey] || []).map(it => ({
-            ...it,
-            people: Array.isArray(it.people) ? it.people.map(toEmailLike) : []
-          }));
+          raw.days[dayKey] = (raw.days[dayKey] || []).map(it => ({ ...it, people: Array.isArray(it.people) ? it.people.map(toEmailLike) : [] }));
         }
       }
       return res.json(raw || { days: {} });
@@ -812,10 +728,7 @@ app.put("/workplan/month", authRequired, (req, res) => {
       const normalized = { days: {} };
       for (const dayKey of Object.keys(days)) {
         const arr = Array.isArray(days[dayKey]) ? days[dayKey] : [];
-        normalized.days[dayKey] = arr.map(it => ({
-          ...it,
-          people: Array.isArray(it.people) ? it.people.map(toEmailLike) : []
-        }));
+        normalized.days[dayKey] = arr.map(it => ({ ...it, people: Array.isArray(it.people) ? it.people.map(toEmailLike) : [] }));
       }
       fs.writeFileSync(planFile, JSON.stringify(normalized, null, 2));
       return res.json({ success: true, mode: "replace" });
@@ -835,17 +748,14 @@ app.put("/workplan/month", authRequired, (req, res) => {
         if (ex.people.includes(email)) {
           const incStatuses = inc.statuses || {};
           if (Object.prototype.hasOwnProperty.call(incStatuses, email)) {
-  ex.statuses = ex.statuses || {};
-  const current = ex.statuses[email] || 'V teku';
-  const incoming = incStatuses[email];
-  // če je že Opravljeno, ne dovolimo spremembe nazaj
-  if (current === 'Opravljeno' && incoming !== 'Opravljeno') {
-    // ignoriraj poskus spremembe
-  } else {
-    ex.statuses[email] = incoming;
-  }
-  existingArr[i] = ex;
-}
+            ex.statuses = ex.statuses || {};
+            const current = ex.statuses[email] || 'V teku';
+            const incoming = incStatuses[email];
+            if (!(current === 'Opravljeno' && incoming !== 'Opravljeno')) {
+              ex.statuses[email] = incoming;
+            }
+            existingArr[i] = ex;
+          }
         }
       }
       merged.days[dayKey] = existingArr;
@@ -858,7 +768,7 @@ app.put("/workplan/month", authRequired, (req, res) => {
   }
 });
 
-// ===== statika =====
+// ---- statika ----
 app.use("/", express.static(WEB_DIR, { index: "index.html" }));
 app.get("/", (req, res) => res.sendFile(path.join(WEB_DIR, "index.html")));
 
