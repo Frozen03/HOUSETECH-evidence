@@ -36,6 +36,8 @@ const P = {
   workplans:  path.join(DATA_DIR, "workplans"),
   todos:      path.join(DATA_DIR, "todos.json"),
   projUploads:path.join(DATA_DIR, "uploads", "projects"),
+  leaves:     path.join(DATA_DIR, "leaves.json"),      
+  holidays:   path.join(DATA_DIR, "holidays.json"),
 };
 fs.mkdirSync(P.workplans,   { recursive: true });
 fs.mkdirSync(P.projUploads, { recursive: true });
@@ -49,6 +51,8 @@ let materials = readJSON(P.materials, []);
 let presence  = readJSON(P.presence, []);
 let jobs      = readJSON(P.jobs, []);
 let todos = readJSON(P.todos, []);     
+let leaves    = readJSON(P.leaves, []); 
+let holidays  = readJSON(P.holidays, []);
 const saveTodos = () => writeJSON(P.todos, todos);
 
 const saveUsers     = () => writeJSON(P.users, users);
@@ -56,6 +60,8 @@ const saveProjects  = () => writeJSON(P.projects, projects);
 const saveMaterials = () => writeJSON(P.materials, materials);
 const savePresence  = () => writeJSON(P.presence, presence);
 const saveJobs      = () => writeJSON(P.jobs, jobs);
+const saveLeaves   = () => writeJSON(P.leaves, leaves);
+const saveHolidays = () => writeJSON(P.holidays, holidays);
 
 // ===== Google OAuth =====
 if (!GOOGLE_CLIENT_ID) console.warn("⚠️ GOOGLE_CLIENT_ID manjka – prijava ne bo delovala.");
@@ -317,6 +323,67 @@ app.delete("/projects/:id/todos/:tid", authRequired, requireRole(["Owner","CEO",
 });
 
 
+// ===== LEAVES (Dopusti/Bolniške) =====
+
+// Uporabnik: pošlje prošnjo
+app.post("/leaves", authRequired, (req, res) => {
+  const { type, from, to, reason } = req.body || {};
+  if (!['leave','sick'].includes(type || '')) return res.status(400).json({ error: "type mora biti 'leave' ali 'sick'" });
+  if (!from) return res.status(400).json({ error: "Manjka 'from' (YYYY-MM-DD)" });
+  const item = {
+    id: crypto.randomUUID(),
+    email: req.user.email,
+    name: (users[req.user.email]?.name) || req.user.email,
+    type, from, to: to || from,
+    reason: String(reason||'').slice(0, 500),
+    status: 'pending',
+    ts: Date.now()
+  };
+  leaves.push(item); saveLeaves();
+  res.status(201).json(item);
+});
+
+// Pregled prošenj (managerji vidijo vse, ostali svoje)
+app.get("/leaves", authRequired, (req, res) => {
+  const { status } = req.query || {};
+  const isMgr = hasManagerRole(req.user);
+  let list = isMgr ? leaves.slice() : leaves.filter(l => l.email === req.user.email);
+  if (status) list = list.filter(l => l.status === status);
+  list.sort((a,b)=> b.ts - a.ts);
+  res.json(list);
+});
+
+// Odobri / zavrni (Owner/CEO/vodja)
+app.patch("/leaves/:id", authRequired, requireRole(["Owner","CEO","vodja"]), (req,res) => {
+  const id = req.params.id;
+  const { status } = req.body || {};
+  if (!['approved','rejected','pending'].includes(status||'')) return res.status(400).json({ error: "status mora biti approved/rejected/pending" });
+  const i = leaves.findIndex(l => l.id === id);
+  if (i === -1) return res.status(404).json({ error: "Ni prošnje" });
+  leaves[i].status = status;
+  leaves[i].moderatedBy = req.user.email;
+  leaves[i].moderatedTs = Date.now();
+  saveLeaves();
+  res.json(leaves[i]);
+});
+
+
+// ===== HOLIDAYS =====
+// GET: vsi prazniki (managerji vidijo, zaposleni samo za info)
+app.get("/holidays", authRequired, (req,res)=>{
+  res.json(holidays);
+});
+
+// POST/PUT: Owner/CEO urejata seznam (dodaj/posodobi cele sezname)
+app.put("/holidays", authRequired, requireRole(["Owner","CEO"]), (req,res)=>{
+  const arr = Array.isArray(req.body) ? req.body : [];
+  // pričakovan format: [{date:'YYYY-MM-DD', name:'Praznik'}]
+  holidays = arr.filter(h => typeof h?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
+  saveHolidays();
+  res.json({ ok:true, count: holidays.length });
+});
+
+
 // ===== MATERIALS =====
 app.get("/materials", authRequired, (req, res) => res.json(materials));
 
@@ -495,6 +562,72 @@ app.get("/reports/summary", authRequired, async (req, res) => {
   }catch(e){
     console.error("GET /reports/summary error:", e);
     res.status(500).json({ error: "Napaka pri poročilih" });
+  }
+});
+
+// ===== SUMMARY: Skupne ure + dopusti/sick + prazniki =====
+function dateRangeDays(fromISO, toISO){
+  const d0 = new Date(fromISO + 'T00:00:00Z');
+  const d1 = new Date((toISO || fromISO) + 'T00:00:00Z');
+  const days = [];
+  for(let d=new Date(d0); d<=d1; d.setUTCDate(d.getUTCDate()+1)){
+    days.push(d.toISOString().slice(0,10));
+  }
+  return days;
+}
+function isWeekday(iso){ const wd = new Date(iso+'T00:00:00Z').getUTCDay(); return wd>=1 && wd<=5; }
+
+app.get("/me/summary", authRequired, async (req,res)=>{
+  try{
+    const from = Number(req.query.from || 0);
+    const to   = Number(req.query.to   || Date.now());
+    const me = req.user.email;
+
+    // Work = iz dnevnikov (že imaš /jobs in report agregacije)
+    const jobsList = jobs
+      .filter(j => j.ts >= from && j.ts <= to)
+      .filter(j => j.email === me);
+    const workHours = jobsList.reduce((s,j)=> s + (Number(j.hours)||0), 0);
+
+    // Leaves (approved in pending posebej)
+    const leavesMine = leaves.filter(l => l.email === me);
+    const rangeFromISO = new Date(from).toISOString().slice(0,10);
+    const rangeToISO   = new Date(to).toISOString().slice(0,10);
+
+    const inRangeDays = (f,t)=> dateRangeDays(f,t).filter(isWeekday);
+
+    const approved = leavesMine.filter(l => l.status === 'approved');
+    const sickDays = approved.filter(l => l.type==='sick')
+      .flatMap(l => inRangeDays(l.from, l.to));
+    const leaveDays = approved.filter(l => l.type==='leave')
+      .flatMap(l => inRangeDays(l.from, l.to));
+
+    const sickHours   = sickDays.length * 8;
+    const leaveHours  = leaveDays.length * 8;
+
+    // Holidays (med pon–pet & v podanem intervalu)
+    const holidaysSet = new Set(
+      holidays
+        .map(h=>h.date)
+        .filter(isWeekday)
+    );
+    const allDaysInQuery = dateRangeDays(rangeFromISO, rangeToISO);
+    const holidayCountInRange = allDaysInQuery.filter(d => holidaysSet.has(d)).length;
+    const holidayHours = holidayCountInRange * 8;
+
+    // pending count (za rumen badge)
+    const pendingCount = hasManagerRole(req.user)
+      ? leaves.filter(l => l.status==='pending').length
+      : leavesMine.filter(l=>l.status==='pending').length;
+
+    res.json({
+      workHours: Math.round(workHours*100)/100,
+      leaveHours, sickHours, holidayHours,
+      pendingLeaves: pendingCount
+    });
+  }catch(e){
+    console.error("GET /me/summary error:", e);
+    res.status(500).json({ error:"Napaka pri povzetku" });
   }
 });
 
