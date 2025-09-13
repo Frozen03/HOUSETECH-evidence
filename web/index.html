@@ -381,6 +381,9 @@ input[type="checkbox"]:checked::after{
     <button id="signOut" class="btn btn-outline hidden">
       <i class="fas fa-right-from-bracket"></i> Odjava
     </button>
+<div id="authKpis" class="flex flex-wrap gap-2 items-center ml-auto">
+  <!-- napolnimo z JS -->
+</div>
   </div>
 </div>
 
@@ -396,6 +399,12 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
+    
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive">
+  <i class="far fa-sun mr-2"></i>Dopusti
+  <span id="leavesTabBadge" class="ml-2 inline-flex items-center justify-center rounded-full bg-yellow-400 text-black text-xs px-2 hidden">0</span>
+</button>
+
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -412,8 +421,8 @@ input[type="checkbox"]:checked::after{
             <button id="clockOut" class="btn" style="background:#EF4444;color:#fff;"><i class="fas fa-sign-out-alt"></i> Odhod</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <button id="breakStart" class="btn btn-outline"><i class="fas fa-utensils"></i> Začetek malice</button>
-            <button id="breakEnd"   class="btn btn-outline"><i class="fas fa-utensils"></i> Konec malice</button>
+            <button id="btnLeave" class="btn btn-outline"><i class="far fa-sun"></i> Dopust</button>
+            <button id="btnSick"  class="btn btn-outline"><i class="fas fa-briefcase-medical"></i> Bolniška</button>
           </div>
         </div>
       </div>
@@ -423,7 +432,56 @@ input[type="checkbox"]:checked::after{
         <ul id="todayEntries" class="space-y-2 text-sm"></ul>
       </div>
     </div>
+
+<!-- MODAL: Dopust -->
+<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="far fa-sun mr-2 text-blue-500"></i>Prošnja za dopust</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bolniška -->
+<div id="sickModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
     
+
+
+
 <!-- MOJE URE -->
 <div id="myHoursPanel" class="card hidden">
   <h2 class="text-lg font-semibold mb-3">
@@ -851,6 +909,25 @@ input[type="checkbox"]:checked::after{
     </div>
   </section>
 
+<section id="tab-leaves" class="hidden section-center">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold"><i class="far fa-sun mr-2 text-blue-500"></i>Dopusti & Bolniške</h2>
+      <div class="text-sm" style="color:var(--muted)">Zaposleni vidijo svoje; Owner/CEO/vodja vse.</div>
+    </div>
+
+    <div class="overflow-auto border rounded-lg">
+      <table class="tbl w-full">
+        <thead>
+          <tr><th>Zaposleni</th><th>Tip</th><th>Od</th><th>Do</th><th>Status</th><th>Opomba</th><th style="width:180px">Akcije</th></tr>
+        </thead>
+        <tbody id="leavesTable"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
   <!-- ===== Poročila ===== -->
   <section id="tab-reports" class="hidden section-center">
     <div class="card">
@@ -1155,6 +1232,54 @@ document.getElementById('signOut')?.addEventListener('click', ()=>{
   ["time","plan","jobs","journals","reports","admin"].forEach(t=>document.getElementById("tab-"+t)?.classList.add("hidden"));
 });
 
+
+async function refreshAuthKpis(){
+  if(!accessToken) return;
+  // obdobje = ta teden (pon-ned) - lahko prilagodiš
+  const now = new Date();
+  const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+
+  const from = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()).getTime();
+  const to   = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23,59,59,999).getTime();
+
+  const q = new URLSearchParams({from, to}).toString();
+  const r = await fetch(API_BASE + '/me/summary?' + q, { headers:{ Authorization:'Bearer '+accessToken }});
+  if(!r.ok) return;
+  const s = await r.json();
+
+  const isStudent = (me?.roles||[]).includes('študent') || (me?.roles||[]).includes('student');
+  const isMgr = (me?.roles||[]).some(r=>['Owner','CEO','vodja'].includes(r));
+
+  const kpis = [];
+  // Vedno: Skupne ure
+  kpis.push(`<div class="kpi-pill" title="Skupne ure (dnevnik)">
+    <i class="far fa-clock mr-1"></i><span>Skupne</span> <b>${(s.workHours||0).toFixed(2)}</b>
+  </div>`);
+
+  if(!isStudent){ // Owner/CEO/Vodja/Zaposlen
+    kpis.push(`<div class="kpi-pill" title="Dopust (odobren)">
+      <i class="far fa-sun mr-1"></i><span>Dopust</span> <b>${s.leaveHours||0}</b>
+    </div>`);
+    kpis.push(`<div class="kpi-pill" title="Bolniška (odobrena)">
+      <i class="fas fa-briefcase-medical mr-1"></i><span>Bolniška</span> <b>${s.sickHours||0}</b>
+    </div>`);
+    kpis.push(`<div class="kpi-pill" title="Prazniki (pon–pet)">
+      <i class="far fa-flag mr-1"></i><span>Praznik</span> <b>${s.holidayHours||0}</b>
+    </div>`);
+  }
+
+  document.getElementById('authKpis').innerHTML = kpis.join('');
+
+  // Badge za zavihek "Dopusti"
+  const badge = document.getElementById('leavesTabBadge');
+  if (badge){
+    badge.textContent = s.pendingLeaves>0 ? s.pendingLeaves : '';
+    badge.classList.toggle('hidden', !(s.pendingLeaves>0));
+  }
+}
+
+
 /* ===== Bootstrap data ===== */
 function mapMaterialsToCatalog(list){
   const out = {}; (list || []).forEach(m => { if (m?.name) out[m.name] = { id: m.id, uom: m.uom || "kos" }; }); return out;
@@ -1165,6 +1290,34 @@ async function loadBootstrapData(){
   const m = await fetch(API_BASE + "/materials",{headers:{Authorization:"Bearer "+accessToken}}); materialsCatalog = m.ok ? mapMaterialsToCatalog(await m.json()) : {};
   renderProjects(); renderUsersAdmin(); renderProjectsAdmin(); renderMaterialsCatalogDatalist(); renderEmployeesFilter(); renderJournalsFilters();
 }
+
+document.getElementById('btnLeave').onclick = ()=>{ document.getElementById('leaveModal').classList.remove('hidden'); };
+document.getElementById('btnSick').onclick  = ()=>{ document.getElementById('sickModal').classList.remove('hidden'); };
+function closeLeaveModal(){ document.getElementById('leaveModal').classList.add('hidden'); }
+function closeSickModal(){  document.getElementById('sickModal').classList.add('hidden'); }
+
+async function submitLeave(type){
+  const from = (type==='leave' ? document.getElementById('leaveFrom').value : document.getElementById('sickFrom').value);
+  const to   = (type==='leave' ? document.getElementById('leaveTo').value   : document.getElementById('sickTo').value);
+  const reason = (type==='leave' ? document.getElementById('leaveReason').value : document.getElementById('sickReason').value);
+  if(!from){ toast("Izberi datum", true); return; }
+  const r = await fetch(API_BASE + '/leaves', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+    body: JSON.stringify({ type, from, to, reason })
+  });
+  if(r.ok){
+    toast(type==='leave' ? "Prošnja za dopust poslana." : "Bolniška zavedena.");
+    closeLeaveModal(); closeSickModal();
+    refreshAuthKpis();
+    refreshLeavesPanel(); // če je odprt
+  }else{
+    const e = await r.json().catch(()=>({error:'Napaka'}));
+    toast(e.error || 'Napaka', true);
+  }
+}
+
+
 
 /* ===== Projekti (selecti) ===== */
 function renderProjects(){
@@ -2084,6 +2237,48 @@ function showSaveNotification(msg="Dnevnik uspešno shranjen!", ok=true) {
   setTimeout(()=> n.classList.remove("progress"), 2600);
 }
 
+async function refreshLeavesPanel(){
+  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+  const list = r.ok ? await r.json() : [];
+  const isMgr = (me?.roles||[]).some(r=>['Owner','CEO','vodja'].includes(r));
+  const tb = document.getElementById('leavesTable');
+  tb.innerHTML = (list.map(it=>{
+    const canAct = isMgr && it.status==='pending';
+    const typeLabel = it.type==='leave' ? 'Dopust' : 'Bolniška';
+    const statusColor = it.status==='approved' ? 'bg-green-100 text-green-700' :
+                        it.status==='rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
+    return `<tr>
+      <td>${it.name || it.email}</td>
+      <td>${typeLabel}</td>
+      <td>${it.from}</td>
+      <td>${it.to}</td>
+      <td><span class="badge ${statusColor}">${it.status}</span></td>
+      <td>${(it.reason||'').replace(/[<>&]/g,s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]))}</td>
+      <td>
+        ${canAct ? `
+          <button class="btn btn-primary !py-1 !px-2" onclick="setLeaveStatus('${it.id}','approved')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-outline !py-1 !px-2" onclick="setLeaveStatus('${it.id}','rejected')"><i class="fas fa-times"></i></button>
+        ` : ''}
+      </td>
+    </tr>`;
+  }).join('')) || `<tr><td colspan="7" class="italic" style="color:var(--muted)">Ni prošenj.</td></tr>`;
+}
+
+async function setLeaveStatus(id, status){
+  const r = await fetch(API_BASE + '/leaves/'+id, {
+    method:'PATCH',
+    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+    body: JSON.stringify({ status })
+  });
+  if(r.ok){ toast("Posodobljeno."); refreshLeavesPanel(); refreshAuthKpis(); }
+  else { const e=await r.json().catch(()=>({error:'Napaka'})); toast(e.error||'Napaka', true); }
+}
+
+// hook v tvoj tab sistem
+const tabBtnLeaves = document.getElementById('tabBtnLeaves');
+if(tabBtnLeaves){
+  tabBtnLeaves.addEventListener('click', ()=>{ showTab('leaves'); refreshLeavesPanel(); });
+}
 
 
 /* ===== Poročila (placeholder – ohranjeno) ===== */
