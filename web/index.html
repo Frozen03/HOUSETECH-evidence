@@ -1136,6 +1136,10 @@ function applyRoleUI(){
   const isVodja = roles.includes('vodja');
   const isMgr   = isOwner || isCEO || isVodja;
   const isEmp   = roles.includes('zaposlen') || roles.includes('študent');
+  const isStudent = (me?.roles||[]).some(r=>/študent|student/i.test(r));
+  document.getElementById('btnLeave').classList.toggle('hidden', isStudent);
+  document.getElementById('btnSick').classList.toggle('hidden', isStudent);
+
 
   // Vidnost tab gumbov
   const btnReports = document.getElementById('tabBtnReports');
