@@ -1197,6 +1197,10 @@ function showAppAfterLogin(){
   if (infoEl){
     infoEl.textContent = `${nameStr}, ${rolesStr}`;
   }
+const isStudent = (me?.roles||[]).some(r=>/študent|student/i.test(r));
+document.getElementById('btnLeave').classList.toggle('hidden', isStudent);
+document.getElementById('btnSick').classList.toggle('hidden', isStudent);
+
 
   // tabs
   document.getElementById('tabsNav')?.classList.remove('hidden');
@@ -1227,6 +1231,7 @@ function showLoggedOut(){
   document.getElementById('todayPanel')?.classList.add('hidden');
   document.getElementById('tab-projects')?.classList.add('hidden');
   document.getElementById('tab-todo')?.classList.add('hidden');
+  document.getElementById('tab-leaves')?.classList.add('hidden');
 }
 
 document.getElementById('signOut')?.addEventListener('click', ()=>{
