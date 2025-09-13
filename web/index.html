@@ -352,6 +352,8 @@ input[type="checkbox"]:checked::after{
 <!-- PRIJAVA -->
 <div id="authCard" class="card mb-6">
   <div class="flex items-start justify-between">
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
     <h2 id="Prijava" class="text-lg font-semibold">
       <i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava
     </h2>
@@ -381,9 +383,6 @@ input[type="checkbox"]:checked::after{
     <button id="signOut" class="btn btn-outline hidden">
       <i class="fas fa-right-from-bracket"></i> Odjava
     </button>
-<div id="authKpis" class="flex flex-wrap gap-2 items-center ml-auto">
-  <!-- napolnimo z JS -->
-</div>
   </div>
 </div>
 
@@ -399,12 +398,7 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
-    
-    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive">
-  <i class="far fa-sun mr-2"></i>Dopusti
-  <span id="leavesTabBadge" class="ml-2 inline-flex items-center justify-center rounded-full bg-yellow-400 text-black text-xs px-2 hidden">0</span>
-</button>
-
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="far fa-sun mr-2"></i>Dopusti</button>
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -421,7 +415,7 @@ input[type="checkbox"]:checked::after{
             <button id="clockOut" class="btn" style="background:#EF4444;color:#fff;"><i class="fas fa-sign-out-alt"></i> Odhod</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnLeave" class="btn btn-outline"><i class="far fa-sun"></i> Dopust</button>
+            <button id="btnLeave" class="btn btn-outline"><i class="fas fa-umbrella-beach"></i> Dopust</button>
             <button id="btnSick"  class="btn btn-outline"><i class="fas fa-briefcase-medical"></i> Bolniška</button>
           </div>
         </div>
@@ -432,56 +426,7 @@ input[type="checkbox"]:checked::after{
         <ul id="todayEntries" class="space-y-2 text-sm"></ul>
       </div>
     </div>
-
-<!-- MODAL: Dopust -->
-<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
-  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
-  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
-      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
-      <h3 class="text-lg font-semibold mb-3"><i class="far fa-sun mr-2 text-blue-500"></i>Prošnja za dopust</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
-        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
-      </div>
-      <div class="mt-2">
-        <label class="block text-sm mb-1">Opomba</label>
-        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 mt-3">
-        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
-        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Bolniška -->
-<div id="sickModal" class="fixed inset-0 z-[130] hidden">
-  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
-  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
-      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
-      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
-        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
-      </div>
-      <div class="mt-2">
-        <label class="block text-sm mb-1">Opomba</label>
-        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 mt-3">
-        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
-        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
-      </div>
-    </div>
-  </div>
-</div>
     
-
-
-
 <!-- MOJE URE -->
 <div id="myHoursPanel" class="card hidden">
   <h2 class="text-lg font-semibold mb-3">
@@ -909,26 +854,6 @@ input[type="checkbox"]:checked::after{
     </div>
   </section>
 
-<!-- ===== Dopusti ===== -->
-<section id="tab-leaves" class="hidden section-center">
-  <div class="card">
-    <div class="flex items-center justify-between mb-3">
-      <h2 class="text-lg font-semibold"><i class="far fa-sun mr-2 text-blue-500"></i>Dopusti & Bolniške</h2>
-      <div class="text-sm" style="color:var(--muted)">Zaposleni vidijo svoje; Owner/CEO/vodja vse.</div>
-    </div>
-
-    <div class="overflow-auto border rounded-lg">
-      <table class="tbl w-full">
-        <thead>
-          <tr><th>Zaposleni</th><th>Tip</th><th>Od</th><th>Do</th><th>Status</th><th>Opomba</th><th style="width:180px">Akcije</th></tr>
-        </thead>
-        <tbody id="leavesTable"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-
   <!-- ===== Poročila ===== -->
   <section id="tab-reports" class="hidden section-center">
     <div class="card">
@@ -945,19 +870,18 @@ input[type="checkbox"]:checked::after{
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-user mr-2 text-blue-500"></i>Prisotnost — ure po zaposlenih</h4><table class="tbl"><tbody id="kpiPresenceEmp"></tbody></table></div>
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-diagram-project mr-2 text-blue-500"></i>Dnevnik — ure po projektih</h4><table class="tbl"><tbody id="kpiJobsProj"></tbody></table></div>
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-people-group mr-2 text-blue-500"></i>Dnevnik — ure po zaposlenih</h4><table class="tbl"><tbody id="kpiJobsEmp"></tbody></table></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-          <div class="card">
-              <h4 class="font-semibold mb-2"><i class="far fa-sun mr-2 text-blue-500"></i>Dopusti (odobreni)</h4>
-          <div id="repLeaves" class="text-sm"></div>
-          </div>
-          <div class="card">
-              <h4 class="font-semibold mb-2"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniške (odobrene)</h4>
-              <div id="repSick" class="text-sm"></div>
-          </div>
-        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <h3 class="font-semibold mb-2">Evidenca prisotnosti (vrstice)</h3>
+          <div class="max-h-96 overflow-auto border rounded-lg">
+            <table class="tbl">
+              <thead><tr><th>Datum</th><th>Zaposleni</th><th style="width:80px">Ure</th></tr></thead>
+              <tbody id="tblPresence"></tbody>
+            </table>
+          </div>
+        </div>
         <div>
           <h3 class="font-semibold mb-2">Dnevnik del (vrstice)</h3>
           <div class="max-h-96 overflow-auto border rounded-lg">
@@ -1034,7 +958,7 @@ let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note
 
 /* ===== Tabs ===== */
 function selectTab(name){
-  ["time","projects","plan","todo","jobs","journals","reports","admin"].forEach(t=>{
+  ["time","projects","plan","todo","jobs","journals","reports","admin","leaves"].forEach(t=>{
     const sec = document.getElementById("tab-"+t);
     if (sec) sec.classList.add("hidden");
     const btn = document.querySelector(`[data-tab="${t}"]`);
@@ -1047,6 +971,7 @@ function selectTab(name){
   if(name==="projects"){ renderProjectsPanel(); }
   if(name==="todo"){ ensureTodoInit(); }
   if(name==="jobs"){ try{ renderMaterials(); renderMaterialsCatalogDatalist(); renderJobLogs(); }catch(e){} }
+  if(name==="leaves"){ refreshLeavesPanel(); }
   if(name==="admin"){ adminReload(); }
   if(name==="reports"){ prepareReportFilters(); renderReports(); }
   if(name==="plan"){ renderPlan(); }
@@ -1081,6 +1006,7 @@ async function handleGoogleCredentialResponse(response){
     await loadBootstrapData();
     applyRoleUI();
     showAppAfterLogin();
+    refreshAuthKpis();
     selectTab('time');
   }catch(e){
     alert("Prijava ni uspela: " + e.message);
@@ -1131,6 +1057,7 @@ window.addEventListener('load', ()=>{
       applyRoleUI(); 
       if (typeof renderProjects==="function") renderProjects();
       showAppAfterLogin();
+      refreshAuthKpis();
       selectTab('time');
     });
   } else {
@@ -1152,9 +1079,12 @@ function applyRoleUI(){
   const btnReports = document.getElementById('tabBtnReports');
   const btnAdmin   = document.getElementById('tabBtnAdmin');
   const btnPlan    = document.getElementById('tabBtnPlan');
+  const btnLeaves  = document.getElementById('tabBtnLeaves');
   const btnJrn     = document.getElementById('tabBtnJournals');
 
   document.getElementById('tabBtnProjects')?.classList.remove('hidden');
+
+  if (btnLeaves) btnLeaves.classList.toggle('hidden', !(isOwner || isCEO));
 
   if (btnReports) btnReports.classList.toggle('hidden', !isOwner && !isCEO);
   if (btnAdmin){
@@ -1197,10 +1127,6 @@ function showAppAfterLogin(){
   if (infoEl){
     infoEl.textContent = `${nameStr}, ${rolesStr}`;
   }
-const isStudent = (me?.roles||[]).some(r=>/študent|student/i.test(r));
-document.getElementById('btnLeave').classList.toggle('hidden', isStudent);
-document.getElementById('btnSick').classList.toggle('hidden', isStudent);
-
 
   // tabs
   document.getElementById('tabsNav')?.classList.remove('hidden');
@@ -1231,61 +1157,12 @@ function showLoggedOut(){
   document.getElementById('todayPanel')?.classList.add('hidden');
   document.getElementById('tab-projects')?.classList.add('hidden');
   document.getElementById('tab-todo')?.classList.add('hidden');
-  document.getElementById('tab-leaves')?.classList.add('hidden');
 }
 
 document.getElementById('signOut')?.addEventListener('click', ()=>{
   localStorage.clear(); accessToken=null; me=null; showLoggedOut();
   ["time","plan","jobs","journals","reports","admin"].forEach(t=>document.getElementById("tab-"+t)?.classList.add("hidden"));
 });
-
-
-async function refreshAuthKpis(){
-  if(!accessToken) return;
-  // obdobje = ta teden (pon-ned) - lahko prilagodiš
-  const now = new Date();
-  const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
-  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
-
-  const from = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate()).getTime();
-  const to   = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate(), 23,59,59,999).getTime();
-
-  const q = new URLSearchParams({from, to}).toString();
-  const r = await fetch(API_BASE + '/me/summary?' + q, { headers:{ Authorization:'Bearer '+accessToken }});
-  if(!r.ok) return;
-  const s = await r.json();
-
-  const isStudent = (me?.roles||[]).includes('študent') || (me?.roles||[]).includes('student');
-  const isMgr = (me?.roles||[]).some(r=>['Owner','CEO','vodja'].includes(r));
-
-  const kpis = [];
-  // Vedno: Skupne ure
-  kpis.push(`<div class="kpi-pill" title="Skupne ure (dnevnik)">
-    <i class="far fa-clock mr-1"></i><span>Skupne</span> <b>${(s.workHours||0).toFixed(2)}</b>
-  </div>`);
-
-  if(!isStudent){ // Owner/CEO/Vodja/Zaposlen
-    kpis.push(`<div class="kpi-pill" title="Dopust (odobren)">
-      <i class="far fa-sun mr-1"></i><span>Dopust</span> <b>${s.leaveHours||0}</b>
-    </div>`);
-    kpis.push(`<div class="kpi-pill" title="Bolniška (odobrena)">
-      <i class="fas fa-briefcase-medical mr-1"></i><span>Bolniška</span> <b>${s.sickHours||0}</b>
-    </div>`);
-    kpis.push(`<div class="kpi-pill" title="Prazniki (pon–pet)">
-      <i class="far fa-flag mr-1"></i><span>Praznik</span> <b>${s.holidayHours||0}</b>
-    </div>`);
-  }
-
-  document.getElementById('authKpis').innerHTML = kpis.join('');
-
-  // Badge za zavihek "Dopusti"
-  const badge = document.getElementById('leavesTabBadge');
-  if (badge){
-    badge.textContent = s.pendingLeaves>0 ? s.pendingLeaves : '';
-    badge.classList.toggle('hidden', !(s.pendingLeaves>0));
-  }
-}
-
 
 /* ===== Bootstrap data ===== */
 function mapMaterialsToCatalog(list){
@@ -1297,34 +1174,6 @@ async function loadBootstrapData(){
   const m = await fetch(API_BASE + "/materials",{headers:{Authorization:"Bearer "+accessToken}}); materialsCatalog = m.ok ? mapMaterialsToCatalog(await m.json()) : {};
   renderProjects(); renderUsersAdmin(); renderProjectsAdmin(); renderMaterialsCatalogDatalist(); renderEmployeesFilter(); renderJournalsFilters();
 }
-
-document.getElementById('btnLeave').onclick = ()=>{ document.getElementById('leaveModal').classList.remove('hidden'); };
-document.getElementById('btnSick').onclick  = ()=>{ document.getElementById('sickModal').classList.remove('hidden'); };
-function closeLeaveModal(){ document.getElementById('leaveModal').classList.add('hidden'); }
-function closeSickModal(){  document.getElementById('sickModal').classList.add('hidden'); }
-
-async function submitLeave(type){
-  const from = (type==='leave' ? document.getElementById('leaveFrom').value : document.getElementById('sickFrom').value);
-  const to   = (type==='leave' ? document.getElementById('leaveTo').value   : document.getElementById('sickTo').value);
-  const reason = (type==='leave' ? document.getElementById('leaveReason').value : document.getElementById('sickReason').value);
-  if(!from){ toast("Izberi datum", true); return; }
-  const r = await fetch(API_BASE + '/leaves', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
-    body: JSON.stringify({ type, from, to, reason })
-  });
-  if(r.ok){
-    toast(type==='leave' ? "Prošnja za dopust poslana." : "Bolniška zavedena.");
-    closeLeaveModal(); closeSickModal();
-    refreshAuthKpis();
-    refreshLeavesPanel(); // če je odprt
-  }else{
-    const e = await r.json().catch(()=>({error:'Napaka'}));
-    toast(e.error || 'Napaka', true);
-  }
-}
-
-
 
 /* ===== Projekti (selecti) ===== */
 function renderProjects(){
@@ -1436,7 +1285,7 @@ async function renderMyHours(){
       <td class="text-right font-semibold">${(Math.round(total*100)/100).toFixed(2)}</td>
     </tr>`;
 
-  tb.innerHTML = totalHtml + rowsHtml;
+  tb.innerHTML = rowsHtml;
 }
 
 
@@ -1836,6 +1685,8 @@ async function renderJobLogs(){
     return `
     <div class="p-3 rounded-lg" style="border:1px solid var(--border);">
       <div class="flex items-start justify-between">
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
         <div class="flex-1">
           <div class="font-medium flex items-center"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}${tools}</div>
           <div class="mt-1 text-sm whitespace-pre-line">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
@@ -2244,48 +2095,6 @@ function showSaveNotification(msg="Dnevnik uspešno shranjen!", ok=true) {
   setTimeout(()=> n.classList.remove("progress"), 2600);
 }
 
-async function refreshLeavesPanel(){
-  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
-  const list = r.ok ? await r.json() : [];
-  const isMgr = (me?.roles||[]).some(r=>['Owner','CEO','vodja'].includes(r));
-  const tb = document.getElementById('leavesTable');
-  tb.innerHTML = (list.map(it=>{
-    const canAct = isMgr && it.status==='pending';
-    const typeLabel = it.type==='leave' ? 'Dopust' : 'Bolniška';
-    const statusColor = it.status==='approved' ? 'bg-green-100 text-green-700' :
-                        it.status==='rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700';
-    return `<tr>
-      <td>${it.name || it.email}</td>
-      <td>${typeLabel}</td>
-      <td>${it.from}</td>
-      <td>${it.to}</td>
-      <td><span class="badge ${statusColor}">${it.status}</span></td>
-      <td>${(it.reason||'').replace(/[<>&]/g,s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]))}</td>
-      <td>
-        ${canAct ? `
-          <button class="btn btn-primary !py-1 !px-2" onclick="setLeaveStatus('${it.id}','approved')"><i class="fas fa-check"></i></button>
-          <button class="btn btn-outline !py-1 !px-2" onclick="setLeaveStatus('${it.id}','rejected')"><i class="fas fa-times"></i></button>
-        ` : ''}
-      </td>
-    </tr>`;
-  }).join('')) || `<tr><td colspan="7" class="italic" style="color:var(--muted)">Ni prošenj.</td></tr>`;
-}
-
-async function setLeaveStatus(id, status){
-  const r = await fetch(API_BASE + '/leaves/'+id, {
-    method:'PATCH',
-    headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
-    body: JSON.stringify({ status })
-  });
-  if(r.ok){ toast("Posodobljeno."); refreshLeavesPanel(); refreshAuthKpis(); }
-  else { const e=await r.json().catch(()=>({error:'Napaka'})); toast(e.error||'Napaka', true); }
-}
-
-// hook v tvoj tab sistem
-const tabBtnLeaves = document.getElementById('tabBtnLeaves');
-if(tabBtnLeaves){
-  tabBtnLeaves.addEventListener('click', ()=>{ showTab('leaves'); refreshLeavesPanel(); });
-}
 
 
 /* ===== Poročila (placeholder – ohranjeno) ===== */
@@ -2351,45 +2160,22 @@ async function renderReports(){
     }).join('') || `<tr><td colspan="2" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
   }
 
-
-async function renderLeavesReports(fromISO, toISO){
-  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
-  const list = r.ok ? await r.json() : [];
-  const inRange = list.filter(l => l.status==='approved' && (l.from <= toISO) && ((l.to||l.from) >= fromISO));
-  const byUser = {};
-  inRange.forEach(l=>{
-    const days = dateRangeDays(l.from, l.to||l.from).filter(isWeekday);
-    const h = days.length*8;
-    byUser[l.email] = (byUser[l.email]||0) + h;
-  });
-  const html = Object.entries(byUser).sort((a,b)=>b[1]-a[1]).map(([mail,h])=>{
-    const name = (usersDir[mail]?.name)||mail;
-    return `<div class="flex justify-between"><span>${name}</span><b>${h}</b></div>`;
-  }).join('') || `<div class="italic" style="color:var(--muted)">Ni podatkov</div>`;
-  document.getElementById('repLeaves').innerHTML = html;
-
-  const byUserSick = {};
-  inRange.filter(l=>l.type==='sick').forEach(l=>{
-    const days = dateRangeDays(l.from, l.to||l.from).filter(isWeekday);
-    const h = days.length*8;
-    byUserSick[l.email] = (byUserSick[l.email]||0) + h;
-  });
-  const htmlSick = Object.entries(byUserSick).sort((a,b)=>b[1]-a[1]).map(([mail,h])=>{
-    const name = (usersDir[mail]?.name)||mail;
-    return `<div class="flex justify-between"><span>${name}</span><b>${h}</b></div>`;
-  }).join('') || `<div class="italic" style="color:var(--muted)">Ni podatkov</div>`;
-  document.getElementById('repSick').innerHTML = htmlSick;
-}
-
-// Pomozne (isti kot v serverju)
-function dateRangeDays(fromISO, toISO){
-  const d0 = new Date(fromISO); const d1 = new Date(toISO||fromISO);
-  const days=[]; for(let d=new Date(d0); d<=d1; d.setDate(d.getDate()+1)) days.push(d.toISOString().slice(0,10));
-  return days;
-}
-function isWeekday(iso){ const wd = new Date(iso).getDay(); return wd>=1 && wd<=5; }
-
   // ===== Tabele (vrstice)
+  // Evidenca prisotnosti (vrstice) – izračunane ure po dnevu/projektu/zaposlenem
+  const tp = document.getElementById('tblPresence');
+  if(tp){
+    const rows = rep.presence.rows || [];
+    rows.sort((a,b)=> a.date.localeCompare(b.date) || (a.projectId||'').localeCompare(b.projectId||'') || a.email.localeCompare(b.email));
+    tp.innerHTML = rows.map(rw=>{
+  const name  = (usersDir[rw.email]?.name) || rw.email;
+  return `<tr>
+    <td>${rw.date}</td>
+    <td>${name}</td>
+    <td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td>
+  </tr>`;
+}).join('') || `<tr><td colspan="4" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
+
+  }
 
   // Dnevnik del (vrstice) – ure iz vnosov
   const tj = document.getElementById('tblJobs');
@@ -2936,6 +2722,8 @@ async function renderJournals(){
   right.innerHTML = logs.map(j=>`
     <div class="p-3 rounded-lg border">
       <div class="flex items-start justify-between">
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
         <div class="flex-1">
           <div class="font-medium"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}</div>
           <div class="mt-1 text-sm">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
@@ -2953,5 +2741,151 @@ async function renderJournals(){
 
 /* ===== Sign out clears ===== */
 </script>
+
+<!-- MODAL: Dopust -->
+<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Prošnja za dopust</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Bolniška -->
+<div id="sickModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function refreshAuthKpis(){
+  if(!accessToken) return;
+
+  // ta teden (pon-ned)
+  const now=new Date();
+  const monday=new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7));
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const from = new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()).getTime();
+  const to   = new Date(sunday.getFullYear(),sunday.getMonth(),sunday.getDate(),23,59,59,999).getTime();
+
+  let data = { workHours:0, leaveHours:0, sickHours:0, holidayHours:0 };
+  try{
+    const q=new URLSearchParams({from,to}).toString();
+    const r=await fetch(API_BASE+'/me/summary?'+q,{headers:{Authorization:'Bearer '+accessToken}});
+    if(r.ok) data = await r.json();
+  }catch(e){}
+
+  const roles=(me?.roles||[]);
+  const isStudent = roles.includes('študent') || roles.includes('student');
+
+  const pills=[];
+  pills.push(`<div class="kpi-pill" title="Skupne ure"><i class="far fa-clock"></i> <span>Skupne</span> <b>${(data.workHours||0).toFixed(2)}</b></div>`);
+  if(!isStudent){
+    pills.push(`<div class="kpi-pill" title="Dopust (odobren)"><i class="fas fa-umbrella-beach"></i> <span>Dopust</span> <b>${data.leaveHours||0}</b></div>`);
+    pills.push(`<div class="kpi-pill" title="Bolniška (odobrena)"><i class="fas fa-briefcase-medical"></i> <span>Bolniška</span> <b>${data.sickHours||0}</b></div>`);
+    pills.push(`<div class="kpi-pill" title="Prazniki (pon–pet)"><i class="far fa-flag"></i> <span>Praznik</span> <b>${data.holidayHours||0}</b></div>`);
+  }
+  const wrap=document.getElementById('authKpis');
+  if(wrap) wrap.innerHTML=pills.join('');
+}
+
+// Leave modals
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id==='btnLeave'){ document.getElementById('leaveModal')?.classList.remove('hidden'); }
+  if(e.target && e.target.id==='btnSick'){  document.getElementById('sickModal')?.classList.remove('hidden'); }
+});
+function closeLeaveModal(){ document.getElementById('leaveModal')?.classList.add('hidden'); }
+function closeSickModal(){  document.getElementById('sickModal')?.classList.add('hidden'); }
+
+async function submitLeave(type){
+  const from = (type==='leave' ? document.getElementById('leaveFrom') : document.getElementById('sickFrom')).value;
+  const to   = (type==='leave' ? document.getElementById('leaveTo')   : document.getElementById('sickTo')).value;
+  const reason = (type==='leave' ? document.getElementById('leaveReason') : document.getElementById('sickReason')).value;
+  if(!from){ alert("Izberi datum 'Od'."); return; }
+
+  try{
+    const r = await fetch(API_BASE + '/leaves', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+      body: JSON.stringify({ type, from, to, reason })
+    });
+    if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
+    closeLeaveModal(); closeSickModal();
+    refreshAuthKpis();
+    if (document.getElementById('tab-leaves') && !document.getElementById('tab-leaves').classList.contains('hidden')){
+      refreshLeavesPanel();
+    }
+  }catch(err){
+    alert("Napaka pri pošiljanju.");
+  }
+}
+
+async function refreshLeavesPanel(){
+  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+  const list = r.ok ? await r.json() : [];
+  const roles = me?.roles||[];
+  const isMgr = roles.includes('Owner') || roles.includes('CEO') || roles.includes('vodja');
+  const tb = document.getElementById('leavesTable');
+  if(!tb) return;
+  tb.innerHTML = (list.map(it=>{
+    const canAct = (isMgr && it.status==='pending');
+    const typeLabel = it.type==='leave' ? 'Dopust' : 'Bolniška';
+    const statusColor = it.status==='approved' ? 'bg-green-100 text-green-700' : (it.status==='rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+    const safeReason = (it.reason||'').replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
+    return `<tr>
+      <td>${it.name || it.email}</td>
+      <td>${typeLabel}</td>
+      <td>${it.from}</td>
+      <td>${it.to}</td>
+      <td><span class="badge ${statusColor}">${it.status}</span></td>
+      <td>${safeReason}</td>
+      <td>
+        ${canAct ? `
+          <button class="btn btn-primary !py-1 !px-2" onclick="setLeaveStatus('${it.id}','approved')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-outline !py-1 !px-2" onclick="setLeaveStatus('${it.id}','rejected')"><i class="fas fa-times"></i></button>
+        ` : ''}
+      </td>
+    </tr>`;
+  }).join('')) || `<tr><td colspan="7" class="italic" style="color:var(--muted)">Ni prošenj.</td></tr>`;
+}
+async function setLeaveStatus(id, status){
+  const r = await fetch(API_BASE + '/leaves/'+id, { method:'PATCH', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken }, body: JSON.stringify({ status }) });
+  if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
+  refreshLeavesPanel(); refreshAuthKpis();
+}
+</script>
+
 </body>
+
 </html>
