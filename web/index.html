@@ -1228,8 +1228,8 @@ function fillProjectsSelect(id){
 /* ===== helperji ===== */
 function setDefaultRange(fromEl, toEl){
   const now=new Date();
-  const f=new Date(now.getFullYear(), now.getMonth(), 5);
-  const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+  const f=new Date(now.getFullYear(), now.getMonth(), 6);
+  const t=new Date(now.getFullYear(), now.getMonth()+1, 6);
   fromEl.value = f.toISOString().slice(0,10);
   toEl.value   = t.toISOString().slice(0,10);
 }
