@@ -394,7 +394,7 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
-    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti</button>
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti <span id="leavesTabBadge" class="ml-2 hidden" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 .4rem;border-radius:999px;font-size:.75rem;font-weight:700;background:#FDE68A;color:#713F12;border:1px solid #FACC15;">0</span></button>
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -1021,7 +1021,7 @@ async function handleGoogleCredentialResponse(response){
     await loadBootstrapData();
     applyRoleUI();
     showAppAfterLogin();
-    refreshAuthKpis();
+    refreshAuthKpis(); refreshLeavesBadge();
     selectTab('time');
   }catch(e){
     alert("Prijava ni uspela: " + e.message);
@@ -1072,7 +1072,7 @@ window.addEventListener('load', ()=>{
       applyRoleUI(); 
       if (typeof renderProjects==="function") renderProjects();
       showAppAfterLogin();
-      refreshAuthKpis();
+      refreshAuthKpis(); refreshLeavesBadge();
       selectTab('time');
     });
   } else {
@@ -1163,9 +1163,8 @@ function showLoggedOut(){
   document.getElementById('statusBadge')?.classList.add('hidden');
 
   const infoEl = document.getElementById('authInfo');
-  if (infoEl){
-    infoEl.textContent = ''; // brez opisa
-  }
+  if (infoEl){ infoEl.textContent = ''; }
+  const kpis=document.getElementById('authKpis'); if(kpis){ kpis.innerHTML=''; }
 
   document.getElementById('tabsNav')?.classList.add('hidden');
   document.getElementById('presencePanel')?.classList.add('hidden');
@@ -2227,6 +2226,7 @@ async function renderPlan(){
 }
 async function renderCalendar(){
   await loadPlanMonth();
+  await loadMonthLeavesAndHolidays();
   drawCalendar();
   bindCategoryChips();     
 }
@@ -2274,10 +2274,12 @@ function drawCalendar(){
 
       const dayNum = day.toLocaleDateString('sl-SI',{day:'2-digit'});
       const weekday = day.toLocaleDateString('sl-SI',{weekday:'short'});
+      const isHoliday = holidaysSet.has(key);
+      const holBadge = isHoliday ? `<span class="ml-2 badge" style="background:#FDE68A;color:#713F12;border:1px solid #FACC15">Praznik</span>` : '';
       const hdr = `
         <div class="cal-numb">${dayNum}
           <div class="cal-day">${weekday}</div>
-        </div>`;
+        </div> ${'${holBadge}'}`;
 
       const list = items.map((it, idx) => {
         const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
@@ -2308,13 +2310,14 @@ function drawCalendar(){
           }
         </div>`;
       }).join('');
+      const listLeaves = (monthLeavesByDay[key]||[]).map(l => `<div class="cal-item cal-progress"><i class="fas fa-umbrella-beach mr-1"></i>Dopust: ${escapeHtml(l.name)}</div>`).join('');
 
       const addBtn = (isOwnerCeoVodja() && !past)
         ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i> dodaj plan</button>`
         : '';
 
       const lockCls = (isOwnerCeoVodja() && !past) ? '' : 'cal-locked';
-      rows.push(`<div class="cal-cell ${lockCls}">${hdr}${list}${addBtn}</div>`);
+      rows.push(`<div class="cal-cell ${lockCls}">${hdr}${list}${listLeaves}${addBtn}</div>`);
     }
   }
 
@@ -2846,33 +2849,71 @@ async function refreshAuthKpis(){
 
 // Leave modals
 document.addEventListener('click', (e)=>{
-  if(e.target && e.target.id==='btnLeave'){ document.getElementById('leaveModal')?.classList.remove('hidden'); }
-  if(e.target && e.target.id==='btnSick'){  document.getElementById('sickModal')?.classList.remove('hidden'); }
+  if(e.target && e.target.id==='btnLeave'){
+    const t = document.getElementById('leaveModal');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const min = new Date(today); min.setDate(min.getDate()+7);
+    const iso = min.toISOString().slice(0,10);
+    const f=document.getElementById('leaveFrom'), to=document.getElementById('leaveTo');
+    if(f){ f.min = iso; f.value = iso; }
+    if(to){ to.min = iso; to.value = iso; }
+    t?.classList.remove('hidden');
+  }
+  if(e.target && e.target.id==='btnSick'){
+    const t = document.getElementById('sickModal');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const iso = today.toISOString().slice(0,10);
+    const f=document.getElementById('sickFrom'), to=document.getElementById('sickTo');
+    if(f){ f.max = iso; f.value = iso; }
+    if(to){ to.max = iso; to.value = iso; }
+    t?.classList.remove('hidden');
+  }
 });
 function closeLeaveModal(){ document.getElementById('leaveModal')?.classList.add('hidden'); }
 function closeSickModal(){  document.getElementById('sickModal')?.classList.add('hidden'); }
 
 async function submitLeave(type){
-  const from = (type==='leave' ? document.getElementById('leaveFrom') : document.getElementById('sickFrom')).value;
-  const to   = (type==='leave' ? document.getElementById('leaveTo')   : document.getElementById('sickTo')).value;
+  const fromEl = (type==='leave' ? document.getElementById('leaveFrom') : document.getElementById('sickFrom'));
+  const toEl   = (type==='leave' ? document.getElementById('leaveTo')   : document.getElementById('sickTo'));
   const reason = (type==='leave' ? document.getElementById('leaveReason') : document.getElementById('sickReason')).value;
+
+  const from = fromEl.value; const to = toEl.value;
   if(!from){ alert("Izberi datum 'Od'."); return; }
 
-  try{
-    const r = await fetch(API_BASE + '/leaves', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
-      body: JSON.stringify({ type, from, to, reason })
-    });
-    if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
-    closeLeaveModal(); closeSickModal();
-    refreshAuthKpis();
-    if (document.getElementById('tab-leaves') && !document.getElementById('tab-leaves').classList.contains('hidden')){
-      refreshLeavesPanel();
-    }
-  }catch(err){
-    alert("Napaka pri pošiljanju.");
+  // VALIDACIJE
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dFrom = new Date(from+'T00:00:00'); const dTo = new Date((to||from)+'T00:00:00');
+
+  if(type==='sick'){
+    // bolniška ne v prihodnost
+    if(dFrom > today || dTo > today){ alert("Bolniške ni mogoče prijaviti v prihodnost."); return; }
+  }else{
+    // dopust: ne v preteklost in ne v tekoči teden; najmanj 7 dni vnaprej
+    const minStart = new Date(today); minStart.setDate(today.getDate()+7);
+    if(dFrom < minStart){ alert("Dopusta ni mogoče prijaviti za preteklost ali tekoči teden. Pošlji vsaj 1 teden vnaprej."); return; }
   }
+
+  (async()=>{
+    try{
+      const r = await fetch(API_BASE + '/leaves', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+        body: JSON.stringify({ type, from, to, reason })
+      });
+      if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
+      closeLeaveModal(); closeSickModal();
+      refreshAuthKpis(); refreshLeavesBadge();
+      if (document.getElementById('tab-leaves') && !document.getElementById('tab-leaves').classList.contains('hidden')){
+        refreshLeavesPanel();
+      }
+      // če je zavihek Plan odprt, osveži koledar
+      if(!document.getElementById('tab-plan')?.classList.contains('hidden')){
+        renderCalendar();
+      }
+    }catch(err){
+      alert("Napaka pri pošiljanju.");
+    }
+  })();
 }
 
 async function refreshLeavesPanel(){
@@ -2884,6 +2925,7 @@ async function refreshLeavesPanel(){
   if(!tb) return;
   tb.innerHTML = (list.map(it=>{
     const canAct = (isMgr && it.status==='pending');
+  refreshLeavesBadge();
     const typeLabel = it.type==='leave' ? 'Dopust' : 'Bolniška';
     const statusColor = it.status==='approved' ? 'bg-green-100 text-green-700' : (it.status==='rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
     const safeReason = (it.reason||'').replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
@@ -2907,6 +2949,60 @@ async function setLeaveStatus(id, status){
   const r = await fetch(API_BASE + '/leaves/'+id, { method:'PATCH', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken }, body: JSON.stringify({ status }) });
   if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
   refreshLeavesPanel(); refreshAuthKpis();
+}
+
+/* ===== Leaves badge (pending) ===== */
+async function refreshLeavesBadge(){
+  const btn = document.getElementById('tabBtnLeaves');
+  const badge = document.getElementById('leavesTabBadge');
+  if(!btn || !badge || !accessToken) return;
+  // samo za Owner/CEO je ta tab viden — njim prikažemo pending št.
+  if(!(isOwnerOrCeo && isOwnerOrCeo())) { badge.classList.add('hidden'); return; }
+  try{
+    const r = await fetch(API_BASE + '/leaves?status=pending', { headers:{ Authorization:'Bearer '+accessToken }});
+    const list = r.ok ? await r.json() : [];
+    const n = Array.isArray(list) ? list.length : 0;
+    if(n>0){ badge.textContent = n; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
+  }catch(e){ /* ignore */ }
+}
+
+/* ===== Approved leaves & holidays for calendar ===== */
+let monthLeavesByDay = {};   // { 'YYYY-MM-DD': [ {name} ] }
+let holidaysSet = new Set();
+
+async function loadMonthLeavesAndHolidays(){
+  if(!accessToken) return;
+  // interval: od 1. dne meseca do zadnjega dne prikazanega meseca
+  const first = new Date(calMonth); first.setDate(1);
+  const last  = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0);
+  const from  = new Date(first.getFullYear(), first.getMonth(), 1).toISOString().slice(0,10);
+  const to    = new Date(last.getFullYear(), last.getMonth(), last.getDate()).toISOString().slice(0,10);
+
+  monthLeavesByDay = {};
+  holidaysSet = new Set();
+  try{
+    // Leaves: samo odobreni dopusti (brez bolniških)
+    const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+    const all = r.ok ? await r.json() : [];
+    const appr = (all||[]).filter(l => l.status==='approved' && l.type==='leave');
+    const inRange = appr.filter(l => (l.from <= to && (l.to||l.from) >= from));
+    // razširi na dni
+    inRange.forEach(l => {
+      const start = new Date(l.from + 'T00:00:00');
+      const end   = new Date((l.to||l.from) + 'T00:00:00');
+      for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+        const iso = d.toISOString().slice(0,10);
+        if(!monthLeavesByDay[iso]) monthLeavesByDay[iso]=[];
+        monthLeavesByDay[iso].push({ name: l.name || (usersDir[l.email]?.name) || l.email });
+      }
+    });
+
+    // Holidays
+    const rh = await fetch(API_BASE + '/holidays', { headers:{ Authorization:'Bearer '+accessToken }});
+    const hol = rh.ok ? await rh.json() : [];
+    (hol||[]).forEach(h => { if(h?.date) holidaysSet.add(h.date); });
+  }catch(e){ /* ignore */ }
 }
 </script>
 
