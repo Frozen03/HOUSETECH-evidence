@@ -352,12 +352,10 @@ input[type="checkbox"]:checked::after{
 <!-- PRIJAVA -->
 <div id="authCard" class="card mb-6">
   <div class="flex items-start justify-between">
-    <h2 id="Prijava" class="text-lg font-semibold">
-      <i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava
-    </h2>
-
     <!-- Status v samem auth panelu -->
     <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
   </div>
 
   <!-- vrstica z informacijami o prijavljenem -->
@@ -396,6 +394,7 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti <span id="leavesTabBadge" class="ml-2 hidden" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 .4rem;border-radius:999px;font-size:.75rem;font-weight:700;background:#FDE68A;color:#713F12;border:1px solid #FACC15;">0</span></button>
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -412,8 +411,8 @@ input[type="checkbox"]:checked::after{
             <button id="clockOut" class="btn" style="background:#EF4444;color:#fff;"><i class="fas fa-sign-out-alt"></i> Odhod</button>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <button id="breakStart" class="btn btn-outline"><i class="fas fa-utensils"></i> Začetek malice</button>
-            <button id="breakEnd"   class="btn btn-outline"><i class="fas fa-utensils"></i> Konec malice</button>
+            <button id="btnLeave" class="btn btn-outline"><i class="fas fa-umbrella-beach"></i> Dopust</button>
+            <button id="btnSick"  class="btn btn-outline"><i class="fas fa-briefcase-medical"></i> Bolniška</button>
           </div>
         </div>
       </div>
@@ -851,8 +850,27 @@ input[type="checkbox"]:checked::after{
     </div>
   </section>
 
-  <!-- ===== Poročila ===== -->
-  <section id="tab-reports" class="hidden section-center">
+<!-- ===== Dopusti ===== -->
+<section id="tab-leaves" class="hidden section-center">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Dopusti & Bolniške</h2>
+      <div class="text-sm" style="color:var(--muted)">Vidno: Owner, CEO</div>
+    </div>
+    <div class="overflow-auto border rounded-lg">
+      <table class="tbl w-full">
+        <thead><tr>
+          <th>Zaposleni</th><th>Tip</th><th>Od</th><th>Do</th><th>Status</th><th>Opomba</th><th style="width:180px">Akcije</th>
+        </tr></thead>
+        <tbody id="leavesTable"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+ <!-- ===== Poročila ===== -->
+<section id="tab-reports" class="hidden section-center">
     <div class="card">
       <h2 class="text-lg font-semibold mb-3"><i class="fas fa-file-export mr-2 text-blue-500"></i>Poročila</h2>
       <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
@@ -955,7 +973,7 @@ let planMonth = { days:{} }; // 'YYYY-MM-DD': [ {projectId, people:[email], note
 
 /* ===== Tabs ===== */
 function selectTab(name){
-  ["time","projects","plan","todo","jobs","journals","reports","admin"].forEach(t=>{
+  ["time","projects","plan","todo","jobs","journals","reports","admin","leaves"].forEach(t=>{
     const sec = document.getElementById("tab-"+t);
     if (sec) sec.classList.add("hidden");
     const btn = document.querySelector(`[data-tab="${t}"]`);
@@ -968,6 +986,7 @@ function selectTab(name){
   if(name==="projects"){ renderProjectsPanel(); }
   if(name==="todo"){ ensureTodoInit(); }
   if(name==="jobs"){ try{ renderMaterials(); renderMaterialsCatalogDatalist(); renderJobLogs(); }catch(e){} }
+  if(name==="leaves"){ refreshLeavesPanel(); }
   if(name==="admin"){ adminReload(); }
   if(name==="reports"){ prepareReportFilters(); renderReports(); }
   if(name==="plan"){ renderPlan(); }
@@ -1002,6 +1021,7 @@ async function handleGoogleCredentialResponse(response){
     await loadBootstrapData();
     applyRoleUI();
     showAppAfterLogin();
+    refreshAuthKpis(); refreshLeavesBadge();
     selectTab('time');
   }catch(e){
     alert("Prijava ni uspela: " + e.message);
@@ -1052,6 +1072,7 @@ window.addEventListener('load', ()=>{
       applyRoleUI(); 
       if (typeof renderProjects==="function") renderProjects();
       showAppAfterLogin();
+      refreshAuthKpis(); refreshLeavesBadge();
       selectTab('time');
     });
   } else {
@@ -1073,9 +1094,12 @@ function applyRoleUI(){
   const btnReports = document.getElementById('tabBtnReports');
   const btnAdmin   = document.getElementById('tabBtnAdmin');
   const btnPlan    = document.getElementById('tabBtnPlan');
+  const btnLeaves  = document.getElementById('tabBtnLeaves');
   const btnJrn     = document.getElementById('tabBtnJournals');
 
   document.getElementById('tabBtnProjects')?.classList.remove('hidden');
+
+  if (btnLeaves) btnLeaves.classList.toggle('hidden', !(isOwner || isCEO));
 
   if (btnReports) btnReports.classList.toggle('hidden', !isOwner && !isCEO);
   if (btnAdmin){
@@ -1139,10 +1163,8 @@ function showLoggedOut(){
   document.getElementById('statusBadge')?.classList.add('hidden');
 
   const infoEl = document.getElementById('authInfo');
-  if (infoEl){
-    infoEl.textContent = ''; // brez opisa
+  if (infoEl){ infoEl.textContent = ''; }
   const kpis=document.getElementById('authKpis'); if(kpis){ kpis.innerHTML=''; }
-  }
 
   document.getElementById('tabsNav')?.classList.add('hidden');
   document.getElementById('presencePanel')?.classList.add('hidden');
@@ -1206,8 +1228,8 @@ function fillProjectsSelect(id){
 /* ===== helperji ===== */
 function setDefaultRange(fromEl, toEl){
   const now=new Date();
-  const f=new Date(now.getFullYear(), now.getMonth(), 1);
-  const t=new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const f=new Date(now.getFullYear(), now.getMonth(), 5);
+  const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
   fromEl.value = f.toISOString().slice(0,10);
   toEl.value   = t.toISOString().slice(0,10);
 }
@@ -1277,7 +1299,9 @@ async function renderMyHours(){
       <td class="text-right font-semibold">${(Math.round(total*100)/100).toFixed(2)}</td>
     </tr>`;
 
-  tb.innerHTML = totalHtml + rowsHtml;
+  tb.innerHTML = rowsHtml;
+  // osveži KPI, da se ujema z enakim obdobjem
+  refreshAuthKpis();
 }
 
 
@@ -1677,6 +1701,8 @@ async function renderJobLogs(){
     return `
     <div class="p-3 rounded-lg" style="border:1px solid var(--border);">
       <div class="flex items-start justify-between">
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
         <div class="flex-1">
           <div class="font-medium flex items-center"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}${tools}</div>
           <div class="mt-1 text-sm whitespace-pre-line">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
@@ -2248,13 +2274,14 @@ function drawCalendar(){
 
       const dayNum = day.toLocaleDateString('sl-SI',{day:'2-digit'});
       const weekday = day.toLocaleDateString('sl-SI',{weekday:'short'});
+      const isHoliday = holidaysSet.has(key);
+      const holBadge = isHoliday ? `<span class="ml-2 badge" style="background:#FDE68A;color:#713F12;border:1px solid #FACC15">Praznik</span>` : '';
       const hdr = `
         <div class="cal-numb">${dayNum}
           <div class="cal-day">${weekday}</div>
-        </div>`;
+        </div> ${'${holBadge}'}`;
 
-      const listLeaves = (monthLeavesByDay[key]||[]).map(l => `<div class=\"cal-item cal-progress\"><i class=\"fas fa-umbrella-beach mr-1\"></i>Dopust: ${escapeHtml(l.name)}</div>`).join('');
-const list = items.map((it, idx) => {
+      const list = items.map((it, idx) => {
         const peopleNames = (it.people || []).map(e => usersDir[e]?.name || e);
         const projName = projects.find(p => p.id === it.projectId)?.name || '—';
         const colorCls = isItemDone(it) ? 'cal-done' : 'cal-progress';
@@ -2283,14 +2310,14 @@ const list = items.map((it, idx) => {
           }
         </div>`;
       }).join('');
+      const listLeaves = (monthLeavesByDay[key]||[]).map(l => `<div class="cal-item cal-progress"><i class="fas fa-umbrella-beach mr-1"></i>Dopust: ${escapeHtml(l.name)}</div>`).join('');
 
       const addBtn = (isOwnerCeoVodja() && !past)
         ? `<button class="btn btn-outline !py-1 !px-2 mt-2" onclick="addPlanItem('${key}')"><i class="fas fa-plus"></i> dodaj plan</button>`
         : '';
 
       const lockCls = (isOwnerCeoVodja() && !past) ? '' : 'cal-locked';
-      const holBadge = holidaysSet.has(key) ? `<span class="ml-2 badge" style="background:#FDE68A;color:#713F12;border:1px solid #FACC15">Praznik</span>` : '';
-rows.push(`<div class="cal-cell ${lockCls}">${hdr}${holBadge}${list}${listLeaves}${addBtn}</div>`);
+      rows.push(`<div class="cal-cell ${lockCls}">${hdr}${list}${listLeaves}${addBtn}</div>`);
     }
   }
 
@@ -2715,6 +2742,8 @@ async function renderJournals(){
   right.innerHTML = logs.map(j=>`
     <div class="p-3 rounded-lg border">
       <div class="flex items-start justify-between">
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
         <div class="flex-1">
           <div class="font-medium"><i class="fas fa-folder text-yellow-500 mr-2"></i>${projectName(j.projectId)}</div>
           <div class="mt-1 text-sm">${j.activity} • ${j.employee} • ${j.hours||0} h</div>
@@ -2731,76 +2760,252 @@ async function renderJournals(){
 }
 
 /* ===== Sign out clears ===== */
+</script>
 
+<!-- MODAL: Dopust -->
+<div id="leaveModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeLeaveModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeLeaveModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Prošnja za dopust</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="leaveFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="leaveTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="leaveReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeLeaveModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('leave')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-function refreshLeavesBadge(){
-  const badge = document.getElementById('leavesTabBadge');
+<!-- MODAL: Bolniška -->
+<div id="sickModal" class="fixed inset-0 z-[130] hidden">
+  <button type="button" class="absolute inset-0 bg-black/50" onclick="closeSickModal()"></button>
+  <div class="absolute inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md card relative rounded-t-2xl sm:rounded-2xl">
+      <button class="absolute right-3 top-3 btn btn-outline !py-1 !px-2" onclick="closeSickModal()"><i class="fas fa-times"></i></button>
+      <h3 class="text-lg font-semibold mb-3"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniška</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div><label class="block text-sm mb-1">Od</label><input type="date" id="sickFrom"></div>
+        <div><label class="block text-sm mb-1">Do</label><input type="date" id="sickTo"></div>
+      </div>
+      <div class="mt-2">
+        <label class="block text-sm mb-1">Opomba</label>
+        <textarea id="sickReason" rows="2" placeholder="Neobvezno"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-3">
+        <button class="btn btn-outline" onclick="closeSickModal()"><i class="fas fa-ban"></i> Prekliči</button>
+        <button class="btn btn-primary" onclick="submitLeave('sick')"><i class="fas fa-paper-plane"></i> Pošlji</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function refreshAuthKpis(){
+  if(!accessToken) return;
+
+  // uporabi filter 'Moje ure' (če obstaja); drugače 5->5
+  let fEl=document.getElementById('mhFrom'), tEl=document.getElementById('mhTo');
+  let from, to;
+  if(fEl && tEl && fEl.value && tEl.value){
+    from = new Date(fEl.value).getTime();
+    to   = new Date(tEl.value).getTime() + 86399999;
+  } else {
+    const now=new Date();
+    const f=new Date(now.getFullYear(), now.getMonth(), 5);
+    const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+    from = f.getTime();
+    to   = t.getTime() + 86399999;
+  }
+
+  let data = { workHours:0, leaveHours:0, sickHours:0, holidayHours:0 };
+  try{
+    const q=new URLSearchParams({from,to}).toString();
+    const r=await fetch(API_BASE+'/me/summary?'+q,{headers:{Authorization:'Bearer '+accessToken}});
+    if(r.ok) data = await r.json();
+  }catch(e){}
+
+  const roles=(me?.roles||[]);
+  const isStudent = roles.includes('študent') || roles.includes('student');
+
+  const pills=[];
+  pills.push(`<div class="kpi-pill" title="Skupne ure"><i class="far fa-clock"></i> <span>Skupne</span> <b>${(data.workHours||0).toFixed(2)}</b></div>`);
+  if(!isStudent){
+    pills.push(`<div class="kpi-pill" title="Dopust (odobren)"><i class="fas fa-umbrella-beach"></i> <span>Dopust</span> <b>${data.leaveHours||0}</b></div>`);
+    pills.push(`<div class="kpi-pill" title="Bolniška (odobrena)"><i class="fas fa-briefcase-medical"></i> <span>Bolniška</span> <b>${data.sickHours||0}</b></div>`);
+    pills.push(`<div class="kpi-pill" title="Prazniki (pon–pet)"><i class="far fa-flag"></i> <span>Praznik</span> <b>${data.holidayHours||0}</b></div>`);
+  }
+  const wrap=document.getElementById('authKpis');
+  if(wrap) wrap.innerHTML=pills.join('');
+}
+
+// Leave modals
+document.addEventListener('click', (e)=>{
+  if(e.target && e.target.id==='btnLeave'){
+    const t = document.getElementById('leaveModal');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const min = new Date(today); min.setDate(min.getDate()+7);
+    const iso = min.toISOString().slice(0,10);
+    const f=document.getElementById('leaveFrom'), to=document.getElementById('leaveTo');
+    if(f){ f.min = iso; f.value = iso; }
+    if(to){ to.min = iso; to.value = iso; }
+    t?.classList.remove('hidden');
+  }
+  if(e.target && e.target.id==='btnSick'){
+    const t = document.getElementById('sickModal');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const iso = today.toISOString().slice(0,10);
+    const f=document.getElementById('sickFrom'), to=document.getElementById('sickTo');
+    if(f){ f.max = iso; f.value = iso; }
+    if(to){ to.max = iso; to.value = iso; }
+    t?.classList.remove('hidden');
+  }
+});
+function closeLeaveModal(){ document.getElementById('leaveModal')?.classList.add('hidden'); }
+function closeSickModal(){  document.getElementById('sickModal')?.classList.add('hidden'); }
+
+async function submitLeave(type){
+  const fromEl = (type==='leave' ? document.getElementById('leaveFrom') : document.getElementById('sickFrom'));
+  const toEl   = (type==='leave' ? document.getElementById('leaveTo')   : document.getElementById('sickTo'));
+  const reason = (type==='leave' ? document.getElementById('leaveReason') : document.getElementById('sickReason')).value;
+
+  const from = fromEl.value; const to = toEl.value;
+  if(!from){ alert("Izberi datum 'Od'."); return; }
+
+  // VALIDACIJE
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dFrom = new Date(from+'T00:00:00'); const dTo = new Date((to||from)+'T00:00:00');
+
+  if(type==='sick'){
+    // bolniška ne v prihodnost
+    if(dFrom > today || dTo > today){ alert("Bolniške ni mogoče prijaviti v prihodnost."); return; }
+  }else{
+    // dopust: ne v preteklost in ne v tekoči teden; najmanj 7 dni vnaprej
+    const minStart = new Date(today); minStart.setDate(today.getDate()+7);
+    if(dFrom < minStart){ alert("Dopusta ni mogoče prijaviti za preteklost ali tekoči teden. Pošlji vsaj 1 teden vnaprej."); return; }
+  }
+
+  (async()=>{
+    try{
+      const r = await fetch(API_BASE + '/leaves', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken },
+        body: JSON.stringify({ type, from, to, reason })
+      });
+      if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
+      closeLeaveModal(); closeSickModal();
+      refreshAuthKpis(); refreshLeavesBadge();
+      if (document.getElementById('tab-leaves') && !document.getElementById('tab-leaves').classList.contains('hidden')){
+        refreshLeavesPanel();
+      }
+      // če je zavihek Plan odprt, osveži koledar
+      if(!document.getElementById('tab-plan')?.classList.contains('hidden')){
+        renderCalendar();
+      }
+    }catch(err){
+      alert("Napaka pri pošiljanju.");
+    }
+  })();
+}
+
+async function refreshLeavesPanel(){
+  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+  const list = r.ok ? await r.json() : [];
+  const roles = me?.roles||[];
+  const isMgr = roles.includes('Owner') || roles.includes('CEO') || roles.includes('vodja');
+  const tb = document.getElementById('leavesTable');
+  if(!tb) return;
+  tb.innerHTML = (list.map(it=>{
+    const canAct = (isMgr && it.status==='pending');
+  refreshLeavesBadge();
+    const typeLabel = it.type==='leave' ? 'Dopust' : 'Bolniška';
+    const statusColor = it.status==='approved' ? 'bg-green-100 text-green-700' : (it.status==='rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+    const safeReason = (it.reason||'').replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]));
+    return `<tr>
+      <td>${it.name || it.email}</td>
+      <td>${typeLabel}</td>
+      <td>${it.from}</td>
+      <td>${it.to}</td>
+      <td><span class="badge ${statusColor}">${it.status}</span></td>
+      <td>${safeReason}</td>
+      <td>
+        ${canAct ? `
+          <button class="btn btn-primary !py-1 !px-2" onclick="setLeaveStatus('${it.id}','approved')"><i class="fas fa-check"></i></button>
+          <button class="btn btn-outline !py-1 !px-2" onclick="setLeaveStatus('${it.id}','rejected')"><i class="fas fa-times"></i></button>
+        ` : ''}
+      </td>
+    </tr>`;
+  }).join('')) || `<tr><td colspan="7" class="italic" style="color:var(--muted)">Ni prošenj.</td></tr>`;
+}
+async function setLeaveStatus(id, status){
+  const r = await fetch(API_BASE + '/leaves/'+id, { method:'PATCH', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken }, body: JSON.stringify({ status }) });
+  if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
+  refreshLeavesPanel(); refreshAuthKpis();
+}
+
+/* ===== Leaves badge (pending) ===== */
+async function refreshLeavesBadge(){
   const btn = document.getElementById('tabBtnLeaves');
-  if(!badge || !btn || !accessToken) return;
-  const roles = (me?.roles||[]);
-  const canSee = roles.includes('Owner') || roles.includes('CEO');
-  if(!canSee){ badge.classList.add('hidden'); return; }
-  fetch(API_BASE + '/leaves?status=pending', { headers:{ Authorization:'Bearer '+accessToken }})
-    .then(r=>r.ok?r.json():[])
-    .then(list=>{
-      const n = Array.isArray(list)? list.length: 0;
-      if(n>0){ badge.textContent=n; badge.classList.remove('hidden'); }
-      else { badge.classList.add('hidden'); }
-    }).catch(()=>{});
+  const badge = document.getElementById('leavesTabBadge');
+  if(!btn || !badge || !accessToken) return;
+  // samo za Owner/CEO je ta tab viden — njim prikažemo pending št.
+  if(!(isOwnerOrCeo && isOwnerOrCeo())) { badge.classList.add('hidden'); return; }
+  try{
+    const r = await fetch(API_BASE + '/leaves?status=pending', { headers:{ Authorization:'Bearer '+accessToken }});
+    const list = r.ok ? await r.json() : [];
+    const n = Array.isArray(list) ? list.length : 0;
+    if(n>0){ badge.textContent = n; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
+  }catch(e){ /* ignore */ }
 }
 
-
-
-function ymdLocal(d){ const y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), da=('0'+d.getDate()).slice(-2); return `${y}-${m}-${da}`; }
-function parseISODateLocal(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
-
-function easterSunday(year){
-  const f=Math.floor; const a=year%19; const b=f(year/100); const c=year%100;
-  const d=f(b/4); const e=b%4; const g=f((8*b+13)/25); const h=(19*a+b-d-g+15)%30;
-  const i=f(c/4); const k=c%4; const l=(32+2*e+2*i-h-k)%7; const m=f((a+11*h+22*l)/451);
-  const month=f((h+l-7*m+114)/31); const day=((h+l-7*m+114)%31)+1; return new Date(year, month-1, day);
-}
-function siHolidays(year){
-  const H=new Set(); const add=(d)=>{const wd=d.getDay(); if(wd>=1 && wd<=5) H.add(ymdLocal(d));};
-  [[1,1],[1,2],[2,8],[4,27],[5,1],[5,2],[6,25],[8,15],[10,31],[11,1],[12,25],[12,26]].forEach(([m,da])=>add(new Date(year,m-1,da)));
-  const e=easterSunday(year); const em=new Date(e); em.setDate(e.getDate()+1); add(em);
-  return H;
-}
-
-let monthLeavesByDay={};
-let holidaysSet=new Set();
+/* ===== Approved leaves & holidays for calendar ===== */
+let monthLeavesByDay = {};   // { 'YYYY-MM-DD': [ {name} ] }
+let holidaysSet = new Set();
 
 async function loadMonthLeavesAndHolidays(){
   if(!accessToken) return;
-  const first=new Date(calMonth); first.setDate(1);
-  const last=new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0);
-  const from=ymdLocal(first), to=ymdLocal(last);
+  // interval: od 1. dne meseca do zadnjega dne prikazanega meseca
+  const first = new Date(calMonth); first.setDate(1);
+  const last  = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0);
+  const from  = new Date(first.getFullYear(), first.getMonth(), 1).toISOString().slice(0,10);
+  const to    = new Date(last.getFullYear(), last.getMonth(), last.getDate()).toISOString().slice(0,10);
 
-  monthLeavesByDay={}; holidaysSet=new Set();
+  monthLeavesByDay = {};
+  holidaysSet = new Set();
   try{
-    const r=await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
-    const all=r.ok ? await r.json() : [];
-    const appr=(all||[]).filter(l=>l.status==='approved' && l.type==='leave');
-    const inRange=appr.filter(l=> !(l.to && l.to<from) && !(l.from>to));
-    inRange.forEach(l=>{
-      let s=parseISODateLocal(l.from), e=parseISODateLocal(l.to||l.from);
-      if(ymdLocal(s)<from) s=parseISODateLocal(from);
-      if(ymdLocal(e)>to) e=parseISODateLocal(to);
-      for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
-        const iso=ymdLocal(d);
-        (monthLeavesByDay[iso] ||= []).push({ name: l.name || (usersDir[l.email]?.name) || l.email });
+    // Leaves: samo odobreni dopusti (brez bolniških)
+    const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+    const all = r.ok ? await r.json() : [];
+    const appr = (all||[]).filter(l => l.status==='approved' && l.type==='leave');
+    const inRange = appr.filter(l => (l.from <= to && (l.to||l.from) >= from));
+    // razširi na dni
+    inRange.forEach(l => {
+      const start = new Date(l.from + 'T00:00:00');
+      const end   = new Date((l.to||l.from) + 'T00:00:00');
+      for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+        const iso = d.toISOString().slice(0,10);
+        if(!monthLeavesByDay[iso]) monthLeavesByDay[iso]=[];
+        monthLeavesByDay[iso].push({ name: l.name || (usersDir[l.email]?.name) || l.email });
       }
     });
 
-    const rh=await fetch(API_BASE + '/holidays', { headers:{ Authorization:'Bearer '+accessToken }});
-    let hol=rh.ok ? await rh.json() : [];
-    if(!Array.isArray(hol) || hol.length===0){
-      const set=siHolidays(first.getFullYear());
-      hol = Array.from(set).map(d => ({date: d, name:'Praznik'}));
-    }
-    (hol||[]).forEach(h=>{ if(h?.date) holidaysSet.add(h.date); });
-  }catch(e){}
+    // Holidays
+    const rh = await fetch(API_BASE + '/holidays', { headers:{ Authorization:'Bearer '+accessToken }});
+    const hol = rh.ok ? await rh.json() : [];
+    (hol||[]).forEach(h => { if(h?.date) holidaysSet.add(h.date); });
+  }catch(e){ /* ignore */ }
 }
 </script>
+
 </body>
+
 </html>
