@@ -352,14 +352,10 @@ input[type="checkbox"]:checked::after{
 <!-- PRIJAVA -->
 <div id="authCard" class="card mb-6">
   <div class="flex items-start justify-between">
-    <!-- KPI chips -->
-    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
-    <h2 id="Prijava" class="text-lg font-semibold">
-      <i class="fas fa-right-to-bracket mr-2 text-blue-500"></i>Prijava
-    </h2>
-
     <!-- Status v samem auth panelu -->
     <div><span id="statusBadge" class="badge bg-green-100 text-green-700 rounded-full px-2 py-0.5 hidden"><i class="fas fa-check mr-1"></i>Prijavljen</span></div>
+    <!-- KPI chips -->
+    <div id="authKpis" class="ml-auto mr-3 flex flex-wrap gap-2 items-center"></div>
   </div>
 
   <!-- vrstica z informacijami o prijavljenem -->
@@ -398,7 +394,7 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
-    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="far fa-sun mr-2"></i>Dopusti</button>
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti</button>
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -854,8 +850,27 @@ input[type="checkbox"]:checked::after{
     </div>
   </section>
 
-  <!-- ===== Poročila ===== -->
-  <section id="tab-reports" class="hidden section-center">
+<!-- ===== Dopusti ===== -->
+<section id="tab-leaves" class="hidden section-center">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-lg font-semibold"><i class="fas fa-umbrella-beach mr-2 text-blue-500"></i>Dopusti & Bolniške</h2>
+      <div class="text-sm" style="color:var(--muted)">Vidno: Owner, CEO</div>
+    </div>
+    <div class="overflow-auto border rounded-lg">
+      <table class="tbl w-full">
+        <thead><tr>
+          <th>Zaposleni</th><th>Tip</th><th>Od</th><th>Do</th><th>Status</th><th>Opomba</th><th style="width:180px">Akcije</th>
+        </tr></thead>
+        <tbody id="leavesTable"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+ <!-- ===== Poročila ===== -->
+<section id="tab-reports" class="hidden section-center">
     <div class="card">
       <h2 class="text-lg font-semibold mb-3"><i class="fas fa-file-export mr-2 text-blue-500"></i>Poročila</h2>
       <div class="grid grid-cols-1 md:grid-cols-5 gap-2 mb-3">
@@ -1214,8 +1229,8 @@ function fillProjectsSelect(id){
 /* ===== helperji ===== */
 function setDefaultRange(fromEl, toEl){
   const now=new Date();
-  const f=new Date(now.getFullYear(), now.getMonth(), 1);
-  const t=new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const f=new Date(now.getFullYear(), now.getMonth(), 5);
+  const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
   fromEl.value = f.toISOString().slice(0,10);
   toEl.value   = t.toISOString().slice(0,10);
 }
@@ -1286,6 +1301,8 @@ async function renderMyHours(){
     </tr>`;
 
   tb.innerHTML = rowsHtml;
+  // osveži KPI, da se ujema z enakim obdobjem
+  refreshAuthKpis();
 }
 
 
@@ -2792,12 +2809,19 @@ async function renderJournals(){
 async function refreshAuthKpis(){
   if(!accessToken) return;
 
-  // ta teden (pon-ned)
-  const now=new Date();
-  const monday=new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7));
-  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
-  const from = new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()).getTime();
-  const to   = new Date(sunday.getFullYear(),sunday.getMonth(),sunday.getDate(),23,59,59,999).getTime();
+  // uporabi filter 'Moje ure' (če obstaja); drugače 5->5
+  let fEl=document.getElementById('mhFrom'), tEl=document.getElementById('mhTo');
+  let from, to;
+  if(fEl && tEl && fEl.value && tEl.value){
+    from = new Date(fEl.value).getTime();
+    to   = new Date(tEl.value).getTime() + 86399999;
+  } else {
+    const now=new Date();
+    const f=new Date(now.getFullYear(), now.getMonth(), 5);
+    const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+    from = f.getTime();
+    to   = t.getTime() + 86399999;
+  }
 
   let data = { workHours:0, leaveHours:0, sickHours:0, holidayHours:0 };
   try{
