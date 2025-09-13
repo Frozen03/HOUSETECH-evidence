@@ -2969,31 +2969,30 @@ let monthLeavesByDay = {};   // { 'YYYY-MM-DD': [ {name} ] }
 let holidaysSet = new Set();
 
 async function loadMonthLeavesAndHolidays(){
-  if(!accessToken) return;
-  // interval: od 1. dne meseca do zadnjega dne prikazanega meseca
-  const first = new Date(calMonth); first.setDate(1);
-  const last  = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0);
-  const from  = new Date(first.getFullYear(), first.getMonth(), 1).toISOString().slice(0,10);
-  const to    = new Date(last.getFullYear(), last.getMonth(), last.getDate()).toISOString().slice(0,10);
+  const ymdLocal = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-  monthLeavesByDay = {};
-  holidaysSet = new Set();
-  try{
-    // Leaves: samo odobreni dopusti (brez bolniških)
-    const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
-    const all = r.ok ? await r.json() : [];
-    const appr = (all||[]).filter(l => l.status==='approved' && l.type==='leave');
-    const inRange = appr.filter(l => (l.from <= to && (l.to||l.from) >= from));
-    // razširi na dni
-    inRange.forEach(l => {
-      const start = new Date(l.from + 'T00:00:00');
-      const end   = new Date((l.to||l.from) + 'T00:00:00');
-      for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-        const iso = d.toISOString().slice(0,10);
-        if(!monthLeavesByDay[iso]) monthLeavesByDay[iso]=[];
-        monthLeavesByDay[iso].push({ name: l.name || (usersDir[l.email]?.name) || l.email });
-      }
-    });
+const first = new Date(calMonth); first.setDate(1);
+const last  = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0);
+const from  = ymdLocal(first);
+const to    = ymdLocal(last);
+
+monthLeavesByDay = {};
+holidaysSet = new Set();
+
+// ... leaves:
+const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+const all = r.ok ? await r.json() : [];
+const appr = (all||[]).filter(l => l.status==='approved' && l.type==='leave');
+const inRange = appr.filter(l => (l.from <= to && (l.to||l.from) >= from));
+inRange.forEach(l => {
+  const start = new Date(l.from + 'T12:00:00'); // sredi dneva = brez UTC drifta
+  const end   = new Date((l.to||l.from) + 'T12:00:00');
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const iso = ymdLocal(d);
+    if(!monthLeavesByDay[iso]) monthLeavesByDay[iso]=[];
+    monthLeavesByDay[iso].push({ name: l.name || (usersDir[l.email]?.name) || l.email });
+  }
+});
 
     // Holidays
     const rh = await fetch(API_BASE + '/holidays', { headers:{ Authorization:'Bearer '+accessToken }});
