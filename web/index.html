@@ -2998,7 +2998,7 @@ inRange.forEach(l => {
     const rh = await fetch(API_BASE + '/holidays', { headers:{ Authorization:'Bearer '+accessToken }});
     const hol = rh.ok ? await rh.json() : [];
     (hol||[]).forEach(h => { if(h?.date) holidaysSet.add(h.date); });
-  }catch(e){ /* ignore */ }
+  }c
 }
 
 /* ===== Sign out clears ===== */
