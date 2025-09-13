@@ -394,7 +394,7 @@ input[type="checkbox"]:checked::after{
 
     <button data-tab="jobs" class="tab-btn tab-inactive"><i class="far fa-list-alt mr-2"></i>Dnevnik del</button>
     <button id="tabBtnJournals" data-tab="journals" class="tab-btn tab-inactive hidden"><i class="fas fa-book-open mr-2"></i>Dnevniki</button>
-    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti <span id="leavesTabBadge" class="ml-2 hidden" style="align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 .4rem;border-radius:999px;font-size:.75rem;font-weight:700;background:#FDE68A;color:#713F12;border:1px solid #FACC15;">0</span></button>
+    <button id="tabBtnLeaves" data-tab="leaves" class="tab-btn tab-inactive hidden"><i class="fas fa-umbrella-beach mr-2"></i>Dopusti <span id="leavesTabBadge" class="ml-2 hidden" style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 .4rem;border-radius:999px;font-size:.75rem;font-weight:700;background:#FDE68A;color:#713F12;border:1px solid #FACC15;">0</span></button>
     <button id="tabBtnReports" data-tab="reports" class="tab-btn tab-inactive"><i class="far fa-chart-bar mr-2"></i>Poročila</button>
     <button id="tabBtnAdmin" data-tab="admin" class="tab-btn tab-inactive"><i class="fas fa-user-shield mr-2"></i>Admin</button>
   </div>
@@ -2815,22 +2815,16 @@ async function refreshAuthKpis(){
   // uporabi filter 'Moje ure' (če obstaja); drugače 5->5
   let fEl=document.getElementById('mhFrom'), tEl=document.getElementById('mhTo');
   let from, to;
-  const from = new Date(document.getElementById('mhFrom').value + 'T00:00:00').getTime();
-const to   = new Date(document.getElementById('mhTo').value   + 'T23:59:59').getTime();
-
-const r = await fetch(API_BASE + `/me/summary?from=${from}&to=${to}`, { headers:{ Authorization:'Bearer '+accessToken } });
-const s = r.ok ? await r.json() : {};
-const work = Number(s.workHours||0);
-const leave = Number(s.leaveHours||0);
-const sick = Number(s.sickHours||0);
-const hol = Number(s.holidayHours||0);
-
-// izpiši vedno številke, tudi ko je vse 0
-document.getElementById('kpiWorkTotal').textContent  = work.toFixed(2);
-document.getElementById('kpiLeaveTotal').textContent = (leave/8).toFixed(0);
-document.getElementById('kpiSickTotal').textContent  = (sick/8).toFixed(0);
-document.getElementById('kpiHolTotal').textContent   = (hol/8).toFixed(0);
-
+  if(fEl && tEl && fEl.value && tEl.value){
+    from = new Date(fEl.value).getTime();
+    to   = new Date(tEl.value).getTime() + 86399999;
+  } else {
+    const now=new Date();
+    const f=new Date(now.getFullYear(), now.getMonth(), 5);
+    const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+    from = f.getTime();
+    to   = t.getTime() + 86399999;
+  }
 
   let data = { workHours:0, leaveHours:0, sickHours:0, holidayHours:0 };
   try{
@@ -2954,7 +2948,7 @@ async function refreshLeavesPanel(){
 async function setLeaveStatus(id, status){
   const r = await fetch(API_BASE + '/leaves/'+id, { method:'PATCH', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+accessToken }, body: JSON.stringify({ status }) });
   if(!r.ok){ const e=await r.json().catch(()=>({error:'Napaka'})); alert(e.error||'Napaka'); return; }
-  refreshLeavesPanel(); refreshAuthKpis();
+  refreshLeavesPanel(); refreshAuthKpis(); refreshLeavesBadge();
 }
 
 /* ===== Leaves badge (pending) ===== */
