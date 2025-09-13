@@ -909,6 +909,7 @@ input[type="checkbox"]:checked::after{
     </div>
   </section>
 
+<!-- ===== Dopusti ===== -->
 <section id="tab-leaves" class="hidden section-center">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
@@ -944,18 +945,19 @@ input[type="checkbox"]:checked::after{
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-user mr-2 text-blue-500"></i>Prisotnost — ure po zaposlenih</h4><table class="tbl"><tbody id="kpiPresenceEmp"></tbody></table></div>
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-diagram-project mr-2 text-blue-500"></i>Dnevnik — ure po projektih</h4><table class="tbl"><tbody id="kpiJobsProj"></tbody></table></div>
         <div class="card"><h4 class="font-semibold mb-2"><i class="fas fa-people-group mr-2 text-blue-500"></i>Dnevnik — ure po zaposlenih</h4><table class="tbl"><tbody id="kpiJobsEmp"></tbody></table></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+          <div class="card">
+              <h4 class="font-semibold mb-2"><i class="far fa-sun mr-2 text-blue-500"></i>Dopusti (odobreni)</h4>
+          <div id="repLeaves" class="text-sm"></div>
+          </div>
+          <div class="card">
+              <h4 class="font-semibold mb-2"><i class="fas fa-briefcase-medical mr-2 text-blue-500"></i>Bolniške (odobrene)</h4>
+              <div id="repSick" class="text-sm"></div>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div>
-          <h3 class="font-semibold mb-2">Evidenca prisotnosti (vrstice)</h3>
-          <div class="max-h-96 overflow-auto border rounded-lg">
-            <table class="tbl">
-              <thead><tr><th>Datum</th><th>Zaposleni</th><th style="width:80px">Ure</th></tr></thead>
-              <tbody id="tblPresence"></tbody>
-            </table>
-          </div>
-        </div>
         <div>
           <h3 class="font-semibold mb-2">Dnevnik del (vrstice)</h3>
           <div class="max-h-96 overflow-auto border rounded-lg">
@@ -2344,22 +2346,45 @@ async function renderReports(){
     }).join('') || `<tr><td colspan="2" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
   }
 
-  // ===== Tabele (vrstice)
-  // Evidenca prisotnosti (vrstice) – izračunane ure po dnevu/projektu/zaposlenem
-  const tp = document.getElementById('tblPresence');
-  if(tp){
-    const rows = rep.presence.rows || [];
-    rows.sort((a,b)=> a.date.localeCompare(b.date) || (a.projectId||'').localeCompare(b.projectId||'') || a.email.localeCompare(b.email));
-    tp.innerHTML = rows.map(rw=>{
-  const name  = (usersDir[rw.email]?.name) || rw.email;
-  return `<tr>
-    <td>${rw.date}</td>
-    <td>${name}</td>
-    <td class="text-right">${(Math.round(rw.hours*100)/100).toFixed(2)}</td>
-  </tr>`;
-}).join('') || `<tr><td colspan="4" class="italic" style="color:var(--muted)">Ni podatkov</td></tr>`;
 
-  }
+async function renderLeavesReports(fromISO, toISO){
+  const r = await fetch(API_BASE + '/leaves', { headers:{ Authorization:'Bearer '+accessToken }});
+  const list = r.ok ? await r.json() : [];
+  const inRange = list.filter(l => l.status==='approved' && (l.from <= toISO) && ((l.to||l.from) >= fromISO));
+  const byUser = {};
+  inRange.forEach(l=>{
+    const days = dateRangeDays(l.from, l.to||l.from).filter(isWeekday);
+    const h = days.length*8;
+    byUser[l.email] = (byUser[l.email]||0) + h;
+  });
+  const html = Object.entries(byUser).sort((a,b)=>b[1]-a[1]).map(([mail,h])=>{
+    const name = (usersDir[mail]?.name)||mail;
+    return `<div class="flex justify-between"><span>${name}</span><b>${h}</b></div>`;
+  }).join('') || `<div class="italic" style="color:var(--muted)">Ni podatkov</div>`;
+  document.getElementById('repLeaves').innerHTML = html;
+
+  const byUserSick = {};
+  inRange.filter(l=>l.type==='sick').forEach(l=>{
+    const days = dateRangeDays(l.from, l.to||l.from).filter(isWeekday);
+    const h = days.length*8;
+    byUserSick[l.email] = (byUserSick[l.email]||0) + h;
+  });
+  const htmlSick = Object.entries(byUserSick).sort((a,b)=>b[1]-a[1]).map(([mail,h])=>{
+    const name = (usersDir[mail]?.name)||mail;
+    return `<div class="flex justify-between"><span>${name}</span><b>${h}</b></div>`;
+  }).join('') || `<div class="italic" style="color:var(--muted)">Ni podatkov</div>`;
+  document.getElementById('repSick').innerHTML = htmlSick;
+}
+
+// Pomozne (isti kot v serverju)
+function dateRangeDays(fromISO, toISO){
+  const d0 = new Date(fromISO); const d1 = new Date(toISO||fromISO);
+  const days=[]; for(let d=new Date(d0); d<=d1; d.setDate(d.getDate()+1)) days.push(d.toISOString().slice(0,10));
+  return days;
+}
+function isWeekday(iso){ const wd = new Date(iso).getDay(); return wd>=1 && wd<=5; }
+
+  // ===== Tabele (vrstice)
 
   // Dnevnik del (vrstice) – ure iz vnosov
   const tj = document.getElementById('tblJobs');
