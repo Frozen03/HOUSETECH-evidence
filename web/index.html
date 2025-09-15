@@ -2660,6 +2660,11 @@ async function renderWeek(){
       return `
         <div class="p-2 border rounded-lg mb-1">
           <div class="font-medium">${proj}</div>
+${it.time
+      ? `<div class="text-xs" style="color:var(--muted)">
+           <i class="far fa-clock mr-1"></i>${it.time}
+         </div>`
+      : ``}
           ${it.note ? `<div class="text-xs italic" style="color:var(--muted)">${it.note}</div>` : ''}
           <div class="text-xs mt-1" style="color:var(--muted)">${teamLine}</div>
           <div class="mt-2 flex items-center gap-2">
