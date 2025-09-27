@@ -1278,8 +1278,8 @@ function fillProjectsSelect(id){
 /* ===== helperji ===== */
 function setDefaultRange(fromEl, toEl){
   const now=new Date();
-  const f=new Date(now.getFullYear(), now.getMonth(), 5);
-  const t=new Date(now.getFullYear(), now.getMonth()+1, 5);
+  const f=new Date(now.getFullYear(), now.getMonth(), 6);
+  const t=new Date(now.getFullYear(), now.getMonth()+1, 6);
   fromEl.value = f.toISOString().slice(0,10);
   toEl.value   = t.toISOString().slice(0,10);
 }
@@ -2167,7 +2167,7 @@ function showSaveNotification(msg="Dnevnik uspešno shranjen!", ok=true) {
 function prepareReportFilters(){
   const from = document.getElementById('repFrom');
   const to   = document.getElementById('repTo');
-  const now=new Date(); const fm=new Date(now.getFullYear(), now.getMonth(), 1); const tm=new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const now=new Date(); const fm=new Date(now.getFullYear(), now.getMonth(), 1); const tm=new Date(now.getFullYear(), now.getMonth()+1, 1);
   from.value = fm.toISOString().slice(0,10);
   to.value   = tm.toISOString().slice(0,10);
   renderEmployeesFilter();
@@ -2731,7 +2731,7 @@ function splitPeopleByStatus(it){
 /* ===== DNEVNIKI (manager) ===== */
 function setDefaultDates(idFrom, idTo){
   const from = document.getElementById(idFrom), to=document.getElementById(idTo);
-  const now=new Date(); const fm=new Date(now.getFullYear(), now.getMonth(), 1); const tm=new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const now=new Date(); const fm=new Date(now.getFullYear(), now.getMonth(), 1); const tm=new Date(now.getFullYear(), now.getMonth()+1, 1);
   from.value = fm.toISOString().slice(0,10); to.value = tm.toISOString().slice(0,10);
 }
 function renderJournalsInit(){
