@@ -619,6 +619,11 @@ input[type="checkbox"]:checked::after{
         <i class="fas fa-clipboard-list mr-2 text-blue-500"></i>Nova naloga
       </h3>
 
+<div class="md:col-span-2">
+          <label class="block text-sm mb-1">Projekt</label>
+          <select id="pmProject"></select>
+        </div>
+      
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:col-span-2">
   <div>
     <label class="block text-sm mb-1">Datum (od)</label>
@@ -648,11 +653,6 @@ input[type="checkbox"]:checked::after{
            inputmode="numeric">
   </div>
 </div>
-
-        <div class="md:col-span-2">
-          <label class="block text-sm mb-1">Projekt</label>
-          <select id="pmProject"></select>
-        </div>
 
         <div>
           <label class="block text-sm mb-1">Kategorija</label>
@@ -2518,14 +2518,18 @@ function openPlanModal(dayKey, idx=null){
   document.getElementById('pmDateFrom').value = baseISO;
   document.getElementById('pmDateTo').value   = ""; // prazen = samo en dan
 
-  let it = { projectId: '', people: [], note:'', time:'7.00', category:'Splošno', status:'V teku' };
+  let it = { projectId: '', people: [], note:'', time:'', category:'Splošno', status:'V teku' };
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
   }
 
-  document.getElementById('pmProject').value  = it.projectId || projects[0]?.id;
-const [tf, tt] = splitTimeRange(it.time || '');
+  document.getElementById('pmProject').value  = it.projectId || '';
+  let [tf, tt] = splitTimeRange(it.time || '');
+
+// Če je prazno, uporabi privzete vrednosti
+if (!tf || tf === '--:--') tf = '07:00';
+if (!tt || tt === '--:--') tt = '15:00';
 document.getElementById('pmTimeFrom').value = tf;
 document.getElementById('pmTimeTo').value   = tt;
   document.getElementById('pmCategory').value = it.category || 'Splošno';
