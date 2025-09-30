@@ -2524,7 +2524,7 @@ function openPlanModal(dayKey, idx=null){
     it = { ...it, ...src };
   }
 
-  document.getElementById('pmProject').value  = it.projectId || '';
+  document.getElementById('pmProject').value  = it.projectId || 'Izberi Projekt';
   let [tf, tt] = splitTimeRange(it.time || '');
 
 // Če je prazno, uporabi privzete vrednosti
