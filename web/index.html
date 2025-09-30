@@ -2518,7 +2518,7 @@ function openPlanModal(dayKey, idx=null){
   document.getElementById('pmDateFrom').value = baseISO;
   document.getElementById('pmDateTo').value   = ""; // prazen = samo en dan
 
-  let it = { projectId: projects[0]?.id, people: [], note:'', time:'', category:'Splošno', status:'V teku' };
+  let it = { projectId: '', people: [], note:'', time:'7.00', category:'Splošno', status:'V teku' };
   if(pm_ctx.isEdit){
     const src = (planMonth.days[dayKey]||[])[idx] || {};
     it = { ...it, ...src };
